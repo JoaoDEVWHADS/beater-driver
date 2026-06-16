@@ -104,13 +104,17 @@ class Carro:
         self.som_freio = obter_caminho_som("freio.wav")
         
         # Caminhos de som de pista ambiente dinâmicos
-        self.som_asfalto = obter_caminho_som("asfalto_loop.wav")
-        if self.som_asfalto == "audio/carros/chevette/asfalto_loop.wav":
-            self.som_asfalto = "audio/pista_ambiente/asfalto_loop.wav" # Fallback global
+        self.som_asfalto = config.get('CARRO', 'asfalto_loop', fallback="")
+        if not self.som_asfalto or not os.path.exists(obter_caminho_recurso(self.som_asfalto)):
+            self.som_asfalto = obter_caminho_som("asfalto_loop.wav")
+            if self.som_asfalto == "audio/carros/chevette/asfalto_loop.wav":
+                self.som_asfalto = "audio/pista_ambiente/asfalto_loop.wav" # Fallback global
             
-        self.som_terra = obter_caminho_som("terra_loop.wav")
-        if self.som_terra == "audio/carros/chevette/terra_loop.wav":
-            self.som_terra = "audio/pista_ambiente/terra_loop.wav" # Fallback global
+        self.som_terra = config.get('CARRO', 'terra_loop', fallback="")
+        if not self.som_terra or not os.path.exists(obter_caminho_recurso(self.som_terra)):
+            self.som_terra = obter_caminho_som("terra_loop.wav")
+            if self.som_terra == "audio/carros/chevette/terra_loop.wav":
+                self.som_terra = "audio/pista_ambiente/terra_loop.wav" # Fallback global
         
         # Notificar o AudioEngine para reconfigurar as amostras de motor para este modelo/carro
         if hasattr(self.audio, "carregar_sons_motor"):
