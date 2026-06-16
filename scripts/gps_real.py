@@ -168,7 +168,7 @@ class GPSReal:
                 lat = float(dados_geo[0]["lat"])
                 lon = float(dados_geo[0]["lon"])
                 
-                # 3. Calcula Rota (OSRM)
+                # 3. Calcula Rota (Sempre reta offline-style)
                 self.calcular_rota(carro_x, carro_y, lat, lon, f"{logradouro}, {numero}")
                 
             except Exception as e:
@@ -180,86 +180,27 @@ class GPSReal:
         threading.Thread(target=_worker, daemon=True).start()
 
     def calcular_rota(self, start_x, start_y, end_lat, end_lon, nome_destino):
-        """Calcula a rota curva-a-curva via OSRM."""
-        start_lat, start_lon = local_para_real(start_x, start_y)
-        
-        try:
-            url_osrm = (
-                f"http://router.project-osrm.org/route/v1/driving/"
-                f"{start_lon},{start_lat};{end_lon},{end_lat}"
-                f"?overview=full&geometries=geojson&steps=true&language=pt"
-            )
-            res = requests.get(url_osrm, timeout=5)
-            if res.status_code != 200:
-                raise Exception("Servidor de rotas offline.")
-                
-            dados = res.json()
-            if "routes" not in dados or not dados["routes"]:
-                raise Exception("Rota não encontrada.")
-                
-            rota = dados["routes"][0]
-            self.distancia_total = float(rota["distance"])
-            self.tempo_total = float(rota["duration"])
-            
-            # Extrai pontos da geometria
-            coords = rota["geometry"]["coordinates"]
-            self.rota_pontos = [real_para_local(c[1], c[0]) for c in coords]
-            
-            # Extrai passos
-            self.rota_passos = []
-            legs = rota.get("legs", [])
-            for leg in legs:
-                steps = leg.get("steps", [])
-                for step in steps:
-                    step_coords = step["geometry"]["coordinates"][0] # primeiro ponto
-                    step_x, step_y = real_para_local(step_coords[1], step_coords[0])
-                    self.rota_passos.append({
-                        "x": step_x,
-                        "y": step_y,
-                        "distancia": step.get("distance", 0.0),
-                        "rua": step.get("name", "via"),
-                        "instrucao": step.get("maneuver", {}).get("instruction", "Siga em frente"),
-                        "anunciado": False
-                    })
-            
-            self.destino_lat = end_lat
-            self.destino_lon = end_lon
-            self.destino_x, self.destino_y = real_para_local(end_lat, end_lon)
-            self.destino_nome = nome_destino
-            
-            self.destino_ativo = True
-            self.modo_passeio = False
-            self.ultimo_passo_anunciado = -1
-            self.buscando = False
-            self.sucesso_busca = True
-            
-            minutos = int(self.tempo_total / 60)
-            dist_km = round(self.distancia_total / 1000, 1)
-            self.falar(f"Rota calculada para {self.destino_nome}. Distância de {dist_km} quilômetros. Tempo estimado de {minutos} minutos.")
-            
-        except Exception as e:
-            print(f"Erro no cálculo de rota: {e}")
-            self.offline_fallback(start_x, start_y, end_lat, end_lon, nome_destino)
-
-    def offline_fallback(self, start_x, start_y, end_lat, end_lon, nome_destino):
-        """Fallback simples local caso o GPS esteja offline."""
+        """Calcula uma rota 100% reta (sem curvas) até o destino real."""
         self.destino_lat = end_lat
         self.destino_lon = end_lon
         self.destino_x, self.destino_y = real_para_local(end_lat, end_lon)
         self.destino_nome = nome_destino
         
-        # Cria uma linha reta simples como rota
+        # Rota 100% reta (sem curvas)
         self.rota_pontos = [(start_x, start_y), (self.destino_x, self.destino_y)]
+        
+        # Apenas um único passo: seguir reto até o destino
         self.rota_passos = [{
             "x": self.destino_x,
             "y": self.destino_y,
             "distancia": math.sqrt((self.destino_x - start_x)**2 + (self.destino_y - start_y)**2),
             "rua": nome_destino,
-            "instrucao": f"Siga em frente até {nome_destino}",
+            "instrucao": f"Siga em frente em linha reta até {nome_destino}",
             "anunciado": False
         }]
+        
         self.distancia_total = self.rota_passos[0]["distancia"]
-        self.tempo_total = self.distancia_total / 12.0 # média de 43 km/h
+        self.tempo_total = self.distancia_total / 12.0 # Média de ~43 km/h
         
         self.destino_ativo = True
         self.modo_passeio = False
@@ -268,9 +209,12 @@ class GPSReal:
         self.sucesso_busca = True
         
         dist_km = round(self.distancia_total / 1000, 1)
-        self.falar(f"GPS Offline: Rota em linha reta calculada para {self.destino_nome}. Distância aproximada de {dist_km} quilômetros.")
+        self.falar(f"Rota em linha reta configurada para {self.destino_nome}. Distância de {dist_km} quilômetros.")
 
-    def atualizar(self, carro_x, carro_y, tempo_atual):
+    def offline_fallback(self, start_x, start_y, end_lat, end_lon, nome_destino):
+        self.calcular_rota(start_x, start_y, end_lat, end_lon, nome_destino)
+
+    def atualizar(self, carro_x, carro_y, carro_angulo, tempo_atual):
         """Atualiza a lógica do GPS a cada quadro (tick)."""
         if self.modo_passeio:
             # Passeio Livre por SP: anuncia rua/bairro de passagem a cada 100 metros
@@ -282,42 +226,42 @@ class GPSReal:
                     self.tempo_ultimo_reverse = tempo_atual
                     self.reverso_geocode_async(carro_x, carro_y)
         
-        elif self.destino_ativo and self.rota_passos:
-            # Navegação guiada dinâmica (suporta marcha à ré e re-anúncios)
-            # Reseta o anúncio se o carro se afastar mais de 150m do último passo anunciado
-            if self.ultimo_passo_anunciado != -1:
-                last_passo = self.rota_passos[self.ultimo_passo_anunciado]
-                dx = last_passo["x"] - carro_x
-                dy = last_passo["y"] - carro_y
-                dist_last = math.sqrt(dx**2 + dy**2)
-                if dist_last > 150.0:
-                    self.ultimo_passo_anunciado = -1
+        elif self.destino_ativo:
+            # Vetor da direção do carro
+            radianos = math.radians(carro_angulo)
+            dir_x = math.sin(radianos)
+            dir_y = -math.cos(radianos)
+            
+            # Vetor do carro até o destino
+            to_dest_x = self.destino_x - carro_x
+            to_dest_y = self.destino_y - carro_y
+            dist_restante = math.sqrt(to_dest_x**2 + to_dest_y**2)
+            
+            # Produto escalar para saber se o destino ficou para trás (menor que 0 significa que passou)
+            produto_escalar = (dir_x * to_dest_x) + (dir_y * to_dest_y)
+            passou_destino = (produto_escalar < -15.0 and dist_restante > 25.0)
 
-            # Acha o passo mais próximo à frente ou atrás
-            passo_mais_proximo_idx = -1
-            menor_dist = 999999.0
-            
-            for i, passo in enumerate(self.rota_passos):
-                dx = passo["x"] - carro_x
-                dy = passo["y"] - carro_y
-                dist_passo = math.sqrt(dx**2 + dy**2)
-                if dist_passo < menor_dist:
-                    menor_dist = dist_passo
-                    passo_mais_proximo_idx = i
-            
-            if passo_mais_proximo_idx != -1 and menor_dist <= 120.0:
-                passo = self.rota_passos[passo_mais_proximo_idx]
-                # Só anuncia se não for o último passo anunciado
-                if self.ultimo_passo_anunciado != passo_mais_proximo_idx:
-                    self.ultimo_passo_anunciado = passo_mais_proximo_idx
-                    # Prepara a mensagem amigável com a distância em metros
-                    inst_limpa = passo['instrucao'].replace("Vire", "vire").replace("Siga", "siga")
-                    self.falar(f"Em {int(menor_dist)} metros, {inst_limpa}")
+            if passou_destino:
+                if tempo_atual - getattr(self, "ultimo_tempo_aviso_re", 0) > 4000:
+                    self.ultimo_tempo_aviso_re = tempo_atual
+                    # Toca um bipe de aviso de 880Hz por 150ms
+                    try:
+                        import numpy as np
+                        amostragem = 44100
+                        num_amostras = int(0.15 * amostragem)
+                        t = np.linspace(0, 0.15, num_amostras, False)
+                        onda = np.sin(880 * t * 2 * np.pi)
+                        onda_int = (onda * 16384).astype(np.int16)
+                        estereo = np.column_stack((onda_int, onda_int))
+                        som_bipe = pygame.sndarray.make_sound(estereo)
+                        som_bipe.set_volume(0.5)
+                        som_bipe.play()
+                    except Exception as e:
+                        print(f"Erro ao gerar bipe de ré: {e}")
+                    
+                    self.falar("Dê ré")
             
             # Chegou ao destino?
-            dx_dest = self.destino_x - carro_x
-            dy_dest = self.destino_y - carro_y
-            dist_restante = math.sqrt(dx_dest**2 + dy_dest**2)
             if dist_restante <= 25.0:
                 self.falar("Você chegou ao seu destino.")
                 self.destino_ativo = False

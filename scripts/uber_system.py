@@ -189,7 +189,7 @@ class UberSystem:
 
     def atualizar_logica(self, tempo_atual, carro, gerar_bipe_func):
         # Atualiza a lógica do GPS Real
-        self.gps.atualizar(carro.x, carro.y, tempo_atual)
+        self.gps.atualizar(carro.x, carro.y, carro.angulo, tempo_atual)
 
         # Lógica de toque de chamada aleatória
         if self.estado_app == "ESPERANDO_CORRIDA":
