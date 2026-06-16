@@ -173,6 +173,10 @@ while rodando_geral:
 
         if carro.motor_ligado and carro.velocidade > 0.5:
             volume_alvo = min(carro.velocidade / 60.0, 0.7)
+            # Se o vidro estiver fechado, reduz drasticamente o som de rodagem dos pneus/ambiente para simular o abafamento
+            if not carro.vidro_aberto:
+                volume_alvo *= 0.35
+                
             for tipo in canais_piso:
                 if tipo == piso_detectado:
                     canais_piso[tipo].set_volume(volume_alvo)
