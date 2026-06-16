@@ -26,18 +26,29 @@ uber = UberSystem(audio, menu)
 
 # --- SISTEMA DE ÁUDIO DO PISO ---
 rua_atual_nome = ""
-canal_asfalto = pygame.mixer.Channel(10)
-canal_terra = pygame.mixer.Channel(11)
+canais_piso = {
+    "asfalto": pygame.mixer.Channel(10),
+    "terra": pygame.mixer.Channel(11),
+    "lama": pygame.mixer.Channel(12),
+    "estrada": pygame.mixer.Channel(13),
+    "rua": pygame.mixer.Channel(14)
+}
+loops_piso = {}
 
-try:
-    som_loop_asfalto = pygame.mixer.Sound(obter_caminho_recurso("audio/pista_ambiente/asfalto_loop.wav"))
-    som_loop_terra = pygame.mixer.Sound(obter_caminho_recurso("audio/pista_ambiente/terra_loop.wav"))
-    canal_asfalto.play(som_loop_asfalto, loops=-1)
-    canal_asfalto.set_volume(0.0)
-    canal_terra.play(som_loop_terra, loops=-1)
-    canal_terra.set_volume(0.0)
-except Exception as e:
-    print(f"Aviso: Não foi possível carregar os loops de ambiente: {e}")
+def carregar_e_tocar_loop(tipo, caminho_padrao):
+    try:
+        som = pygame.mixer.Sound(obter_caminho_recurso(caminho_padrao))
+        loops_piso[tipo] = som
+        canais_piso[tipo].play(som, loops=-1)
+        canais_piso[tipo].set_volume(0.0)
+    except Exception as e:
+        print(f"Aviso: Não foi possível carregar o loop {tipo}: {e}")
+
+carregar_e_tocar_loop("asfalto", "audio/pista_ambiente/asfalto_loop.wav")
+carregar_e_tocar_loop("terra", "audio/pista_ambiente/terra_loop.wav")
+carregar_e_tocar_loop("lama", "audio/pista_ambiente/lama_loop.wav")
+carregar_e_tocar_loop("estrada", "audio/pista_ambiente/estrada_loop.wav")
+carregar_e_tocar_loop("rua", "audio/pista_ambiente/rua_loop.wav")
 
 def gerar_bipe_codigo(frequencia, duracao, vol_esq=1.0, vol_dir=1.0):
     amostragem = 44100
@@ -71,28 +82,19 @@ while rodando_geral:
             carro.no_carro = False
             
             # Recarrega os sons de pista e pneus de acordo com as especificidades do novo carro
-            try:
-                canal_asfalto.stop()
-            except:
-                pass
-            try:
-                canal_terra.stop()
-            except:
-                pass
-                
-            try:
-                som_loop_asfalto = pygame.mixer.Sound(obter_caminho_recurso(carro.som_asfalto))
-                canal_asfalto.play(som_loop_asfalto, loops=-1)
-                canal_asfalto.set_volume(0.0)
-            except Exception as e:
-                print(f"Aviso: Não foi possível carregar asfalto loop: {e}")
-                
-            try:
-                som_loop_terra = pygame.mixer.Sound(obter_caminho_recurso(carro.som_terra))
-                canal_terra.play(som_loop_terra, loops=-1)
-                canal_terra.set_volume(0.0)
-            except Exception as e:
-                print(f"Aviso: Não foi possível carregar terra loop: {e}")
+            for tipo in canais_piso:
+                try:
+                    canais_piso[tipo].stop()
+                except:
+                    pass
+                try:
+                    som_caminho = carro.sons_piso.get(tipo, f"audio/pista_ambiente/{tipo}_loop.wav")
+                    som = pygame.mixer.Sound(obter_caminho_recurso(som_caminho))
+                    loops_piso[tipo] = som
+                    canais_piso[tipo].play(som, loops=-1)
+                    canais_piso[tipo].set_volume(0.0)
+                except Exception as e:
+                    print(f"Aviso: Não foi possível carregar o loop {tipo} do carro: {e}")
                 
             estado_jogo = "MODOLIVRE"
             uber.estado_app = "MODOLIVRE"
@@ -167,15 +169,14 @@ while rodando_geral:
 
         if carro.motor_ligado and carro.velocidade > 0.5:
             volume_alvo = min(carro.velocidade / 60.0, 0.7)
-            if piso_detectado == "asfalto":
-                canal_asfalto.set_volume(volume_alvo)
-                canal_terra.set_volume(0.0)
-            else:
-                canal_terra.set_volume(volume_alvo)
-                canal_asfalto.set_volume(0.0)
+            for tipo in canais_piso:
+                if tipo == piso_detectado:
+                    canais_piso[tipo].set_volume(volume_alvo)
+                else:
+                    canais_piso[tipo].set_volume(0.0)
         else:
-            canal_asfalto.set_volume(0.0)
-            canal_terra.set_volume(0.0)
+            for tipo in canais_piso:
+                canais_piso[tipo].set_volume(0.0)
 
     # Adicionado fundo visual simples para a caixa de texto renderizar profissionalmente
     tela.fill((10, 10, 15))
