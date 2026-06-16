@@ -263,9 +263,10 @@ class AudioEngine:
         self.canal_pipoco_a.set_volume(vol)
         self.canal_pipoco_a.play(self.som_pipoco_objeto)
 
-    def tocar(self, caminho_som):
+    def tocar(self, caminho_som, volume=1.0):
         try:
             som = pygame.mixer.Sound(obter_caminho_recurso(caminho_som))
+            som.set_volume(volume)
             self.canal_sfx.play(som)
         except Exception as e:
             print(f"Erro ao tocar SFX {caminho_som}: {e}")
