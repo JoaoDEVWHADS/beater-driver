@@ -388,13 +388,15 @@ class Carro:
                     if "rpm_up" in cfg and self.rpm > cfg["rpm_up"] and self.marcha_automatica < 3:
                         self.marcha_automatica += 1
                         self.tempo_ultima_troca = tempo_atual
-                        self.audio.tocar(self.som_marcha)
+                        if self.modelo != "corolla":
+                            self.audio.tocar(self.som_marcha)
                         self.rpm -= 1500
                     # Reduzir marcha (Kickdown ou desaceleração extrema)
                     elif "rpm_down" in cfg and self.rpm < cfg["rpm_down"] and self.marcha_automatica > 1:
                         self.marcha_automatica -= 1
                         self.tempo_ultima_troca = tempo_atual
-                        self.audio.tocar(self.som_marcha)
+                        if self.modelo != "corolla":
+                            self.audio.tocar(self.som_marcha)
                         self.rpm += 1200
 
                 if acelerando and not self.cortando_giro:
