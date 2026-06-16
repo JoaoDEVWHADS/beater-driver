@@ -224,8 +224,10 @@ class AudioEngine:
             nomes_tentativas = [nome_arquivo]
             if nome_arquivo.endswith(".wav"):
                 nomes_tentativas.append(nome_arquivo[:-4] + ".ogg")
+                nomes_tentativas.append(nome_arquivo[:-4] + ".mp3")
             elif nome_arquivo.endswith(".ogg"):
                 nomes_tentativas.append(nome_arquivo[:-4] + ".wav")
+                nomes_tentativas.append(nome_arquivo[:-4] + ".mp3")
 
             for nome in nomes_tentativas:
                 # 1. Tenta achar na subpasta específica (fora/ ou dentro/)

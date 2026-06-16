@@ -29,8 +29,8 @@ def carregar_som_rodas(modelo):
         pass
     som_rodas = None
     
-    # Procura por Rodas.ogg, rodas.ogg, Rodas.wav ou rodas.wav na pasta dentro/
-    for nome in ["Rodas.ogg", "rodas.ogg", "Rodas.wav", "rodas.wav"]:
+    # Procura por Rodas.ogg, rodas.ogg, Rodas.wav, rodas.wav, Rodas.mp3 ou rodas.mp3 na pasta dentro/
+    for nome in ["Rodas.ogg", "rodas.ogg", "Rodas.wav", "rodas.wav", "Rodas.mp3", "rodas.mp3"]:
         caminho = f"audio/carros/{modelo}/dentro/{nome}"
         caminho_abs = obter_caminho_recurso(caminho)
         if os.path.exists(caminho_abs):
