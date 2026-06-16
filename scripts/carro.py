@@ -44,8 +44,30 @@ class Carro:
         self.pipocos_restantes_tirada = 0
         self.ultimo_pipoco_tirada = 0
 
+        # Estado do vidro
+        self.vidro_aberto = True
+        self.som_vidro_abrir = "audio/carros/chevette/abrir_vidro.wav"
+        self.som_vidro_fechar = "audio/carros/chevette/fechar_vidro.wav"
+
         # Define o modelo padrão (Chevette) na inicialização
         self.definir_modelo("chevette")
+
+    def toggle_vidro(self):
+        if not self.no_carro:
+            return
+        
+        self.vidro_aberto = not self.vidro_aberto
+        
+        if self.vidro_aberto:
+            self.audio.tocar(self.som_vidro_abrir)
+            self.audio.falar("Vidro aberto")
+        else:
+            self.audio.tocar(self.som_vidro_fechar)
+            self.audio.falar("Vidro fechado")
+            
+        # Re-carrega o áudio com o novo estado de abafamento
+        if hasattr(self.audio, "definir_estado_vidro"):
+            self.audio.definir_estado_vidro(self.vidro_aberto, self.modelo)
 
     def definir_modelo(self, modelo):
         import os
@@ -103,6 +125,10 @@ class Carro:
         self.som_marcha = obter_caminho_som("marcha.wav")
         self.som_freio = obter_caminho_som("freio.wav")
         
+        # Sons de abrir/fechar vidro
+        self.som_vidro_abrir = obter_caminho_som("abrir_vidro.wav")
+        self.som_vidro_fechar = obter_caminho_som("fechar_vidro.wav")
+        
         # Caminhos de som de pista ambiente dinâmicos
         self.sons_piso = {}
         for tipo in ["asfalto", "terra", "lama", "estrada", "rua"]:
@@ -116,7 +142,7 @@ class Carro:
         
         # Notificar o AudioEngine para reconfigurar as amostras de motor para este modelo/carro
         if hasattr(self.audio, "carregar_sons_motor"):
-            self.audio.carregar_sons_motor(modelo)
+            self.audio.carregar_sons_motor(modelo, self.vidro_aberto)
 
     def entrar_sair(self):
         self.no_carro = not self.no_carro

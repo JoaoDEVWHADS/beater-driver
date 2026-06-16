@@ -150,6 +150,10 @@ while rodando_geral:
                 if evento.key == pygame.K_f:
                     uber.falar_gps(carro)
 
+                # Vidro do Carro (Tecla M)
+                if evento.key == pygame.K_m:
+                    carro.toggle_vidro()
+
     if teclas[pygame.K_l] and not carro.motor_ligado:
         tecla_partida_segurada = True
 

@@ -199,14 +199,33 @@ class AudioEngine:
         except Exception as e:
             print(f"Erro ao tocar SFX {caminho_som}: {e}")
 
-    def carregar_sons_motor(self, modelo):
+    def carregar_sons_motor(self, modelo, vidro_aberto=True):
         import os
         from scripts.config import obter_caminho_recurso
         
+        # Salva o modelo e estado do vidro atuais no AudioEngine
+        self.modelo_atual = modelo
+        self.vidro_aberto_atual = vidro_aberto
+
+        subpasta = "fora" if vidro_aberto else "dentro"
+        
         def resolver_caminho(nome_arquivo):
-            caminho_modelo = f"audio/carros/{modelo}/{nome_arquivo}"
-            if os.path.exists(obter_caminho_recurso(caminho_modelo)):
-                return caminho_modelo
+            # 1. Tenta achar na subpasta específica (fora/ ou dentro/)
+            caminho_especifico = f"audio/carros/{modelo}/{subpasta}/{nome_arquivo}"
+            if os.path.exists(obter_caminho_recurso(caminho_especifico)):
+                return caminho_especifico
+            
+            # 2. Se não achar, tenta achar na raiz da pasta do carro
+            caminho_raiz_carro = f"audio/carros/{modelo}/{nome_arquivo}"
+            if os.path.exists(obter_caminho_recurso(caminho_raiz_carro)):
+                return caminho_raiz_carro
+                
+            # 3. Fallback: tenta achar na subpasta correspondente do Chevette
+            caminho_chevette_subpasta = f"audio/carros/chevette/{subpasta}/{nome_arquivo}"
+            if os.path.exists(obter_caminho_recurso(caminho_chevette_subpasta)):
+                return caminho_chevette_subpasta
+                
+            # 4. Fallback absoluto: raiz do Chevette
             return f"audio/carros/chevette/{nome_arquivo}"
 
         self.dados_idle = self.carregar_matriz_audio_func(resolver_caminho("idle.wav"))
@@ -219,3 +238,6 @@ class AudioEngine:
         except Exception as e:
             print(f"Erro ao carregar pipoco para {modelo}: {e}")
             self.som_pipoco_objeto = None
+
+    def definir_estado_vidro(self, vidro_aberto, modelo):
+        self.carregar_sons_motor(modelo, vidro_aberto)
