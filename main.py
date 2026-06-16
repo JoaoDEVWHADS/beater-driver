@@ -16,6 +16,32 @@ tela = pygame.display.set_mode((400, 420))
 pygame.display.set_caption("Ride Share: Brazil")
 relogio = pygame.time.Clock()
 
+# --- SISTEMA DE SOM DE RODAS ---
+canal_rodas = pygame.mixer.Channel(15)
+som_rodas = None
+
+def carregar_som_rodas(modelo):
+    global som_rodas
+    try:
+        canal_rodas.stop()
+    except:
+        pass
+    som_rodas = None
+    
+    # Procura por Rodas.ogg, rodas.ogg, Rodas.wav ou rodas.wav na pasta dentro/
+    for nome in ["Rodas.ogg", "rodas.ogg", "Rodas.wav", "rodas.wav"]:
+        caminho = f"audio/carros/{modelo}/dentro/{nome}"
+        caminho_abs = obter_caminho_recurso(caminho)
+        if os.path.exists(caminho_abs):
+            try:
+                som_rodas = pygame.mixer.Sound(caminho_abs)
+                canal_rodas.play(som_rodas, loops=-1)
+                canal_rodas.set_volume(0.0)
+                print(f"Som de rodas carregado para {modelo}: {caminho}")
+                break
+            except Exception as e:
+                print(f"Erro ao carregar som de rodas {caminho}: {e}")
+
 audio = AudioEngine()
 carro = Carro(audio)
 jogador = Jogador(audio)
@@ -52,31 +78,6 @@ carregar_e_tocar_loop("lama", "audio/pista_ambiente/lama_loop.wav")
 carregar_e_tocar_loop("estrada", "audio/pista_ambiente/estrada_loop.wav")
 carregar_e_tocar_loop("rua", "audio/pista_ambiente/rua_loop.wav")
 
-# --- SISTEMA DE SOM DE RODAS ---
-canal_rodas = pygame.mixer.Channel(15)
-som_rodas = None
-
-def carregar_som_rodas(modelo):
-    global som_rodas
-    try:
-        canal_rodas.stop()
-    except:
-        pass
-    som_rodas = None
-    
-    # Procura por Rodas.ogg, rodas.ogg, Rodas.wav ou rodas.wav na pasta dentro/
-    for nome in ["Rodas.ogg", "rodas.ogg", "Rodas.wav", "rodas.wav"]:
-        caminho = f"audio/carros/{modelo}/dentro/{nome}"
-        caminho_abs = obter_caminho_recurso(caminho)
-        if os.path.exists(caminho_abs):
-            try:
-                som_rodas = pygame.mixer.Sound(caminho_abs)
-                canal_rodas.play(som_rodas, loops=-1)
-                canal_rodas.set_volume(0.0)
-                print(f"Som de rodas carregado para {modelo}: {caminho}")
-                break
-            except Exception as e:
-                print(f"Erro ao carregar som de rodas {caminho}: {e}")
 
 def gerar_bipe_codigo(frequencia, duracao, vol_esq=1.0, vol_dir=1.0):
     amostragem = 44100
