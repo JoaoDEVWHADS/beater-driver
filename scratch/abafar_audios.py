@@ -57,6 +57,22 @@ def aplicar_filtro_abafamento(caminho_entrada, caminho_saida, cutoff=600):
         print(f"Erro ao filtrar {caminho_entrada}: {e}")
         return False
 
+# Garante que os arquivos base de pista existem em audio/pista_ambiente/
+import shutil
+
+pista_ambiente = "audio/pista_ambiente"
+if not os.path.exists(f"{pista_ambiente}/rua_loop.wav") and os.path.exists(f"{pista_ambiente}/asfalto_loop.wav"):
+    print("Criando rua_loop.wav a partir de asfalto_loop.wav...")
+    shutil.copyfile(f"{pista_ambiente}/asfalto_loop.wav", f"{pista_ambiente}/rua_loop.wav")
+
+if not os.path.exists(f"{pista_ambiente}/estrada_loop.wav") and os.path.exists(f"{pista_ambiente}/terra_loop.wav"):
+    print("Criando estrada_loop.wav a partir de terra_loop.wav...")
+    shutil.copyfile(f"{pista_ambiente}/terra_loop.wav", f"{pista_ambiente}/estrada_loop.wav")
+
+if not os.path.exists(f"{pista_ambiente}/lama_loop.wav") and os.path.exists(f"{pista_ambiente}/terra_loop.wav"):
+    print("Criando lama_loop.wav a partir de terra_loop.wav...")
+    shutil.copyfile(f"{pista_ambiente}/terra_loop.wav", f"{pista_ambiente}/lama_loop.wav")
+
 # Aplica nos sons de motor internos da cabine (dentro/)
 pasta_corolla = "audio/carros/corolla"
 aplicar_filtro_abafamento(f"{pasta_corolla}/fora/idle.wav", f"{pasta_corolla}/dentro/idle.wav", cutoff=400)
