@@ -68,6 +68,9 @@ class Carro:
             
         # Re-carrega o áudio com o novo estado de abafamento
         self.sons_piso = self.sons_piso_fora if self.vidro_aberto else self.sons_piso_dentro
+        self.som_ligar = self.som_ligar_fora if self.vidro_aberto else self.som_ligar_dentro
+        self.som_marcha = self.som_marcha_fora if self.vidro_aberto else self.som_marcha_dentro
+        self.som_freio = self.som_freio_fora if self.vidro_aberto else self.som_freio_dentro
         
         # Cria uma flag para o main.py recarregar os arquivos de pista
         self.sinalizar_recarga_pistas = True
@@ -121,15 +124,34 @@ class Carro:
                     self.config_marchas_auto[m] = {"vel_max": 140.0, "forca": 0.16, "rpm_down": 2000}
 
         # Configurações de som com fallback individual para o chevette
-        def obter_caminho_som(nome_arquivo):
+        def obter_caminho_som(nome_arquivo, subfolder=None):
+            if subfolder:
+                caminho_modelo = f"audio/carros/{modelo}/{subfolder}/{nome_arquivo}"
+                if os.path.exists(obter_caminho_recurso(caminho_modelo)):
+                    return caminho_modelo
+                caminho_chevette = f"audio/carros/chevette/{subfolder}/{nome_arquivo}"
+                if os.path.exists(obter_caminho_recurso(caminho_chevette)):
+                    return caminho_chevette
+                    
             caminho_modelo = f"audio/carros/{modelo}/{nome_arquivo}"
             if os.path.exists(obter_caminho_recurso(caminho_modelo)):
                 return caminho_modelo
             return f"audio/carros/chevette/{nome_arquivo}"
 
-        self.som_ligar = obter_caminho_som("ligar.wav")
-        self.som_marcha = obter_caminho_som("marcha.wav")
-        self.som_freio = obter_caminho_som("freio.wav")
+        # Sons de ligar, marcha e freio (dentro e fora)
+        self.som_ligar_fora = obter_caminho_som("ligar.wav", "fora")
+        self.som_ligar_dentro = obter_caminho_som("ligar.wav", "dentro")
+        
+        self.som_marcha_fora = obter_caminho_som("marcha.wav", "fora")
+        self.som_marcha_dentro = obter_caminho_som("marcha.wav", "dentro")
+        
+        self.som_freio_fora = obter_caminho_som("freio.wav", "fora")
+        self.som_freio_dentro = obter_caminho_som("freio.wav", "dentro")
+        
+        # Atribui os sons mecânicos ativos
+        self.som_ligar = self.som_ligar_fora if self.vidro_aberto else self.som_ligar_dentro
+        self.som_marcha = self.som_marcha_fora if self.vidro_aberto else self.som_marcha_dentro
+        self.som_freio = self.som_freio_fora if self.vidro_aberto else self.som_freio_dentro
         
         # Sons de abrir/fechar vidro
         self.som_vidro_abrir = obter_caminho_som("abrir_vidro.wav")
