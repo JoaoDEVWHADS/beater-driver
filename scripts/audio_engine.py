@@ -222,6 +222,15 @@ class AudioEngine:
             return
         self.falhando = falhando
         self.rpm_alvo = rpm_normal
+        
+        # Reset playheads to 0.0 when starting to accelerate again
+        if self.acelerador_atual == 0.0 and acelerador > 0.0:
+            if modo_atual in ["P", "N"]:
+                self.pos_low = 0.0
+                self.pos_mid = 0.0
+            else:
+                self.pos_high = 0.0
+                
         self.acelerador_atual = acelerador
         self.modo_atual = modo_atual
         self.velocidade_atual = velocidade
