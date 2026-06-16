@@ -207,7 +207,7 @@ class AudioEngine:
         self.velocidade_atual = velocidade
 
     def tocar_pipoco_corte(self):
-        if self.som_pipoco_objeto is None: return
+        if self.som_pipoco_objeto is None or (hasattr(self, 'modelo_atual') and self.modelo_atual == "corolla"): return
         volume_aleatorio = random.uniform(1.2, 1.5)
         
         # Reduz volume do pipoco se o vidro estiver fechado
@@ -224,7 +224,7 @@ class AudioEngine:
         self.usar_canal_a = not self.usar_canal_a
 
     def tocar_pipoco_unico(self):
-        if self.som_pipoco_objeto is None: return
+        if self.som_pipoco_objeto is None or (hasattr(self, 'modelo_atual') and self.modelo_atual == "corolla"): return
         vol = 1.5
         if not self.vidro_aberto_atual:
             vol *= 0.45

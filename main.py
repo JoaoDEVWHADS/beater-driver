@@ -28,6 +28,8 @@ def carregar_som_rodas(modelo):
     except:
         pass
     som_rodas = None
+    if modelo == "corolla":
+        return
     
     # Procura por Rodas.ogg, rodas.ogg, Rodas.wav, rodas.wav, Rodas.mp3 ou rodas.mp3 na pasta dentro/
     for nome in ["Rodas.ogg", "rodas.ogg", "Rodas.wav", "rodas.wav", "Rodas.mp3", "rodas.mp3"]:
@@ -227,7 +229,10 @@ while rodando_geral:
                 
             for tipo in canais_piso:
                 if tipo == piso_detectado:
-                    canais_piso[tipo].set_volume(volume_alvo)
+                    if carro.modelo == "corolla" and tipo == "terra":
+                        canais_piso[tipo].set_volume(0.0)
+                    else:
+                        canais_piso[tipo].set_volume(volume_alvo)
                 else:
                     canais_piso[tipo].set_volume(0.0)
             
