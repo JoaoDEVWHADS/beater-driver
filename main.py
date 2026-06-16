@@ -12,6 +12,7 @@ from scripts.uber_system import UberSystem # Importando o novo sistema exportado
 from scripts.config import obter_caminho_recurso
 
 pygame.init()
+pygame.mixer.set_num_channels(16)
 tela = pygame.display.set_mode((400, 420)) 
 pygame.display.set_caption("Ride Share: Brazil")
 relogio = pygame.time.Clock()
