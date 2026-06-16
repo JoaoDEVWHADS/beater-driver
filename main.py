@@ -171,9 +171,26 @@ while rodando_geral:
             rua_atual_nome = nome_da_rua
             audio.falar(f"Entrou na {rua_atual_nome}")
 
+        # Se o vidro foi aberto/fechado, recarrega dinamicamente as trilhas sonoras de dentro/fora de cada piso
+        if getattr(carro, "sinalizar_recarga_pistas", False):
+            for tipo in canais_piso:
+                try:
+                    canais_piso[tipo].stop()
+                except:
+                    pass
+                try:
+                    som_caminho = carro.sons_piso.get(tipo, f"audio/pista_ambiente/{tipo}_loop.wav")
+                    som = pygame.mixer.Sound(obter_caminho_recurso(som_caminho))
+                    loops_piso[tipo] = som
+                    canais_piso[tipo].play(som, loops=-1)
+                    canais_piso[tipo].set_volume(0.0)
+                except Exception as e:
+                    print(f"Aviso: Erro ao alternar som de pista para {tipo}: {e}")
+            carro.sinalizar_recarga_pistas = False
+
         if carro.motor_ligado and carro.velocidade > 0.5:
             volume_alvo = min(carro.velocidade / 60.0, 0.7)
-            # Se o vidro estiver fechado, reduz drasticamente o som de rodagem dos pneus/ambiente para simular o abafamento
+            # Se o vidro estiver fechado, reduz adicionalmente o volume de rodagem dos pneus/ambiente para simular o abafamento físico
             if not carro.vidro_aberto:
                 volume_alvo *= 0.35
                 

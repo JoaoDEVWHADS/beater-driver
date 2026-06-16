@@ -46,6 +46,7 @@ class Carro:
 
         # Estado do vidro
         self.vidro_aberto = True
+        self.sinalizar_recarga_pistas = False
         self.som_vidro_abrir = "audio/carros/chevette/abrir_vidro.wav"
         self.som_vidro_fechar = "audio/carros/chevette/fechar_vidro.wav"
 
@@ -66,6 +67,11 @@ class Carro:
             self.audio.falar("Vidro fechado")
             
         # Re-carrega o áudio com o novo estado de abafamento
+        self.sons_piso = self.sons_piso_fora if self.vidro_aberto else self.sons_piso_dentro
+        
+        # Cria uma flag para o main.py recarregar os arquivos de pista
+        self.sinalizar_recarga_pistas = True
+
         if hasattr(self.audio, "definir_estado_vidro"):
             self.audio.definir_estado_vidro(self.vidro_aberto, self.modelo)
 
@@ -129,16 +135,34 @@ class Carro:
         self.som_vidro_abrir = obter_caminho_som("abrir_vidro.wav")
         self.som_vidro_fechar = obter_caminho_som("fechar_vidro.wav")
         
-        # Caminhos de som de pista ambiente dinâmicos
-        self.sons_piso = {}
+        # Caminhos de som de pista ambiente organizados em subpastas dentro/fora
+        self.sons_piso_fora = {}
+        self.sons_piso_dentro = {}
         for tipo in ["asfalto", "terra", "lama", "estrada", "rua"]:
-            caminho = config.get('CARRO', f'{tipo}_loop', fallback="")
-            if not caminho or not os.path.exists(obter_caminho_recurso(caminho)):
-                caminho = obter_caminho_som(f"{tipo}_loop.wav")
-                # Se cair no chevette e o arquivo não existir lá, usa o default global
-                if caminho == f"audio/carros/chevette/{tipo}_loop.wav" and not os.path.exists(obter_caminho_recurso(caminho)):
-                    caminho = f"audio/pista_ambiente/{tipo}_loop.wav"
-            self.sons_piso[tipo] = caminho
+            # 1. Carrega asfalto_loop, terra_loop, etc da seção [CARRO] se houver
+            caminho_custom = config.get('CARRO', f'{tipo}_loop', fallback="")
+            if caminho_custom and os.path.exists(obter_caminho_recurso(caminho_custom)):
+                self.sons_piso_fora[tipo] = caminho_custom
+                self.sons_piso_dentro[tipo] = caminho_custom
+            else:
+                # Caso contrário, busca nas pastas dentro/ e fora/
+                # Para fora:
+                caminho_fora = f"audio/carros/{modelo}/fora/{tipo}_loop.wav"
+                if not os.path.exists(obter_caminho_recurso(caminho_fora)):
+                    caminho_fora = f"audio/pista_ambiente/{tipo}_loop.wav" # Fallback
+                self.sons_piso_fora[tipo] = caminho_fora
+                
+                # Para dentro:
+                caminho_dentro = f"audio/carros/{modelo}/dentro/{tipo}_loop.wav"
+                if not os.path.exists(obter_caminho_recurso(caminho_dentro)):
+                    # Se não tiver som de dentro exclusivo do carro, tenta do chevette/dentro/
+                    caminho_dentro = f"audio/carros/chevette/dentro/{tipo}_loop.wav"
+                    if not os.path.exists(obter_caminho_recurso(caminho_dentro)):
+                        caminho_dentro = caminho_fora # Fallback para o de fora
+                self.sons_piso_dentro[tipo] = caminho_dentro
+                
+        # Define os caminhos ativos no momento
+        self.sons_piso = self.sons_piso_fora if self.vidro_aberto else self.sons_piso_dentro
         
         # Notificar o AudioEngine para reconfigurar as amostras de motor para este modelo/carro
         if hasattr(self.audio, "carregar_sons_motor"):
