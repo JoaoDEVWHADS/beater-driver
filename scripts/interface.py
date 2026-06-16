@@ -22,7 +22,7 @@ class MenuPrincipal:
         
         # Dados de Progresso do Jogador (Carregados ou Padrão)
         self.creditos = 1100  
-        self.carros_comprados = ["chevette"]
+        self.carros_comprados = ["chevette", "corolla"]
         self.motorista_nome = "" # Armazena o nome customizado do motorista
         
         self.carregar_progresso()
@@ -108,10 +108,12 @@ class MenuPrincipal:
             config.read(self.arquivo_save)
             if 'PROGRESSO' in config:
                 self.creditos = config.getint('PROGRESSO', 'creditos', fallback=1100)
-                carros_str = config.get('PROGRESSO', 'carros_comprados', fallback="chevette")
+                carros_str = config.get('PROGRESSO', 'carros_comprados', fallback="chevette,corolla")
                 self.carros_comprados = [c.strip() for c in os.path.expandvars(carros_str).split(",") if c.strip()]
                 if "chevette" not in self.carros_comprados:
                     self.carros_comprados.append("chevette")
+                if "corolla" not in self.carros_comprados:
+                    self.carros_comprados.append("corolla")
                 self.motorista_nome = config.get('PROGRESSO', 'motorista_nome', fallback="")
         else:
             self.salvar_progresso()
