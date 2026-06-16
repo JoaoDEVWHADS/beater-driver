@@ -221,22 +221,29 @@ class AudioEngine:
         subpasta = "fora" if vidro_aberto else "dentro"
         
         def resolver_caminho(nome_arquivo):
-            # 1. Tenta achar na subpasta específica (fora/ ou dentro/)
-            caminho_especifico = f"audio/carros/{modelo}/{subpasta}/{nome_arquivo}"
-            if os.path.exists(obter_caminho_recurso(caminho_especifico)):
-                return caminho_especifico
-            
-            # 2. Se não achar, tenta achar na raiz da pasta do carro
-            caminho_raiz_carro = f"audio/carros/{modelo}/{nome_arquivo}"
-            if os.path.exists(obter_caminho_recurso(caminho_raiz_carro)):
-                return caminho_raiz_carro
+            nomes_tentativas = [nome_arquivo]
+            if nome_arquivo.endswith(".wav"):
+                nomes_tentativas.append(nome_arquivo[:-4] + ".ogg")
+            elif nome_arquivo.endswith(".ogg"):
+                nomes_tentativas.append(nome_arquivo[:-4] + ".wav")
+
+            for nome in nomes_tentativas:
+                # 1. Tenta achar na subpasta específica (fora/ ou dentro/)
+                caminho_especifico = f"audio/carros/{modelo}/{subpasta}/{nome}"
+                if os.path.exists(obter_caminho_recurso(caminho_especifico)):
+                    return caminho_especifico
                 
-            # 3. Fallback: tenta achar na subpasta correspondente do Chevette
-            caminho_chevette_subpasta = f"audio/carros/chevette/{subpasta}/{nome_arquivo}"
-            if os.path.exists(obter_caminho_recurso(caminho_chevette_subpasta)):
-                return caminho_chevette_subpasta
+                # 2. Se não achar, tenta achar na raiz da pasta do carro
+                caminho_raiz_carro = f"audio/carros/{modelo}/{nome}"
+                if os.path.exists(obter_caminho_recurso(caminho_raiz_carro)):
+                    return caminho_raiz_carro
+                    
+                # 3. Fallback: tenta achar na subpasta correspondente do Chevette
+                caminho_chevette_subpasta = f"audio/carros/chevette/{subpasta}/{nome}"
+                if os.path.exists(obter_caminho_recurso(caminho_chevette_subpasta)):
+                    return caminho_chevette_subpasta
                 
-            # 4. Fallback absoluto: raiz do Chevette
+            # Fallback absoluto
             return f"audio/carros/chevette/{nome_arquivo}"
 
         self.dados_idle = self.carregar_matriz_audio_func(resolver_caminho("idle.wav"))

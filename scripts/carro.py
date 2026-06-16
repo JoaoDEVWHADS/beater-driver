@@ -125,17 +125,25 @@ class Carro:
 
         # Configurações de som com fallback individual para o chevette
         def obter_caminho_som(nome_arquivo, subfolder=None):
-            if subfolder:
-                caminho_modelo = f"audio/carros/{modelo}/{subfolder}/{nome_arquivo}"
+            nomes_tentativas = [nome_arquivo]
+            if nome_arquivo.endswith(".wav"):
+                nomes_tentativas.append(nome_arquivo[:-4] + ".ogg")
+            elif nome_arquivo.endswith(".ogg"):
+                nomes_tentativas.append(nome_arquivo[:-4] + ".wav")
+
+            for nome in nomes_tentativas:
+                if subfolder:
+                    caminho_modelo = f"audio/carros/{modelo}/{subfolder}/{nome}"
+                    if os.path.exists(obter_caminho_recurso(caminho_modelo)):
+                        return caminho_modelo
+                    caminho_chevette = f"audio/carros/chevette/{subfolder}/{nome}"
+                    if os.path.exists(obter_caminho_recurso(caminho_chevette)):
+                        return caminho_chevette
+                        
+                caminho_modelo = f"audio/carros/{modelo}/{nome}"
                 if os.path.exists(obter_caminho_recurso(caminho_modelo)):
                     return caminho_modelo
-                caminho_chevette = f"audio/carros/chevette/{subfolder}/{nome_arquivo}"
-                if os.path.exists(obter_caminho_recurso(caminho_chevette)):
-                    return caminho_chevette
-                    
-            caminho_modelo = f"audio/carros/{modelo}/{nome_arquivo}"
-            if os.path.exists(obter_caminho_recurso(caminho_modelo)):
-                return caminho_modelo
+
             return f"audio/carros/chevette/{nome_arquivo}"
 
         # Sons de ligar, marcha e freio (dentro e fora)
