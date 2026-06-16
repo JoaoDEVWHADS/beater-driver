@@ -423,6 +423,8 @@ class Carro:
 
             if self.modo_atual in ["D", "R"] and not acelerando:
                 self.velocidade *= 0.988 
+                if self.velocidade < 0.1:
+                    self.velocidade = 0.0
 
             if self.rpm > self.rpm_max: self.rpm = self.rpm_max - 50
             if self.rpm < lenta_atual - 150: self.rpm = lenta_atual - 150

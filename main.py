@@ -166,9 +166,16 @@ while rodando_geral:
                     uber.campo_atual = "CEP"
                     uber.audio.falar("Digite o CEP do destino e pressione TAB para o número, ou ENTER para buscar.")
 
-                # Tecla de limpar destino e iniciar passeio livre por SP (Tecla -)
+                # Tecla de atalho para GPS/CEP (Tecla -)
                 if evento.key in [pygame.K_MINUS, pygame.K_KP_MINUS]:
-                    uber.gps.limpar_destino()
+                    if uber.gps.destino_ativo:
+                        uber.gps.limpar_destino()
+                    else:
+                        uber.estado_app = "CELULAR_BUSCA_CEP"
+                        uber.cep_input = ""
+                        uber.numero_input = ""
+                        uber.campo_atual = "CEP"
+                        uber.audio.falar("Digite o CEP do destino e pressione TAB para o número, ou ENTER para buscar.")
 
                 # Ignição (Tecla L)
                 if evento.key == pygame.K_l:
@@ -214,7 +221,7 @@ while rodando_geral:
     if estado_jogo != "MENU":
         piso_detectado, nome_da_rua = mapa.obter_piso_e_rua(carro.x, carro.y)
 
-        if nome_da_rua != rua_atual_nome:
+        if nome_da_rua != rua_atual_nome and carro.velocidade > 0.5:
             rua_atual_nome = nome_da_rua
             audio.falar(f"Entrou na {rua_atual_nome}")
 

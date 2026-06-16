@@ -283,20 +283,36 @@ class GPSReal:
                     self.reverso_geocode_async(carro_x, carro_y)
         
         elif self.destino_ativo and self.rota_passos:
-            # Navegação guiada
-            # 1. Encontra a distância até o próximo passo
+            # Navegação guiada dinâmica (suporta marcha à ré e re-anúncios)
+            # Reseta o anúncio se o carro se afastar mais de 150m do último passo anunciado
+            if self.ultimo_passo_anunciado != -1:
+                last_passo = self.rota_passos[self.ultimo_passo_anunciado]
+                dx = last_passo["x"] - carro_x
+                dy = last_passo["y"] - carro_y
+                dist_last = math.sqrt(dx**2 + dy**2)
+                if dist_last > 150.0:
+                    self.ultimo_passo_anunciado = -1
+
+            # Acha o passo mais próximo à frente ou atrás
+            passo_mais_proximo_idx = -1
+            menor_dist = 999999.0
+            
             for i, passo in enumerate(self.rota_passos):
-                if not passo["anunciado"]:
-                    dx = passo["x"] - carro_x
-                    dy = passo["y"] - carro_y
-                    dist_passo = math.sqrt(dx**2 + dy**2)
-                    
-                    # Anuncia com antecedência de 100 metros
-                    if dist_passo <= 100.0:
-                        passo["anunciado"] = True
-                        self.ultimo_passo_anunciado = i
-                        self.falar(f"Atenção: {passo['instrucao']}")
-                    break
+                dx = passo["x"] - carro_x
+                dy = passo["y"] - carro_y
+                dist_passo = math.sqrt(dx**2 + dy**2)
+                if dist_passo < menor_dist:
+                    menor_dist = dist_passo
+                    passo_mais_proximo_idx = i
+            
+            if passo_mais_proximo_idx != -1 and menor_dist <= 120.0:
+                passo = self.rota_passos[passo_mais_proximo_idx]
+                # Só anuncia se não for o último passo anunciado
+                if self.ultimo_passo_anunciado != passo_mais_proximo_idx:
+                    self.ultimo_passo_anunciado = passo_mais_proximo_idx
+                    # Prepara a mensagem amigável com a distância em metros
+                    inst_limpa = passo['instrucao'].replace("Vire", "vire").replace("Siga", "siga")
+                    self.falar(f"Em {int(menor_dist)} metros, {inst_limpa}")
             
             # Chegou ao destino?
             dx_dest = self.destino_x - carro_x
