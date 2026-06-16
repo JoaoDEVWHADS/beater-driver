@@ -64,10 +64,14 @@ while rodando_geral:
             rodando_geral = False
             break
         elif opcao_escolhida == "Carreira":
-            carro.no_carro = True
+            carro_escolhido = menu.abrir_selecao_carro(tela, relogio)
+            if carro_escolhido is None:
+                continue
+            carro.definir_modelo(carro_escolhido)
+            carro.no_carro = False
             estado_jogo = "MODOLIVRE"
             uber.estado_app = "MODOLIVRE"
-            audio.falar("Modo Carreira iniciado. Dê um toque em L para ligar o motor ou P para abrir o celular.")
+            audio.falar(f"Modo Carreira iniciado. Seu {carro.nome} está estacionado. Segure a tecla L para entrar e ligar o motor, ou aperte P para abrir o celular.")
             continue
 
     tecla_partida_segurada = False

@@ -22,7 +22,7 @@ class MenuPrincipal:
         
         # Dados de Progresso do Jogador (Carregados ou Padrão)
         self.creditos = 1100  
-        self.chevette_comprado = False
+        self.chevette_comprado = True
         self.gol_comprado = False
         self.corsa_comprado = False
         self.motorista_nome = "" # Armazena o nome customizado do motorista
@@ -48,16 +48,16 @@ class MenuPrincipal:
             "corsa": {
                 "nome": "Corsa Wind",
                 "preco": 10000,
-                "info_concessionaria": "Corsa Wind Um Ponto Zero. Veículo esgotado no estoque da concessionária por falta de chips.",
-                "historico": "",
-                "pecas": []
+                "info_concessionaria": "Corsa Wind Um Ponto Zero. Preço: Dez mil créditos. Carro econômico e prático para o trânsito!",
+                "historico": "Corsa Wind Um Ponto Zero. Hatch clássico dos anos noventa muito confiável, mecânica simples e baixo consumo.",
+                "pecas": ["Motor 1.0 MPFI 4 Cilindros", "Injeção Eletrônica Multiponto", "Câmbio de 5 Marchas Curto", "Escapamento Silencioso Original"]
             },
             "gol": {
                 "nome": "Gol Quadrado",
                 "preco": 12000,
-                "info_concessionaria": "Gol Quadrado Um Ponto Seis AP. Lote esgotado! Sem previsão de reposição do estoque.",
-                "historico": "",
-                "pecas": []
+                "info_concessionaria": "Gol Quadrado Um Ponto Seis AP. Preço: Doze mil créditos. Muito potente, clássico e robusto!",
+                "historico": "Gol Quadrado Um Ponto Seis com motor AP. O queridinho das ruas brasileiras, excelente torque, muito robusto e de fácil preparação.",
+                "pecas": ["Motor AP 1.6", "Carburador Web 2E Regulado", "Câmbio AP de 5 Marchas Longo", "Escapamento Esportivo JK"]
             }
         }
 
@@ -79,7 +79,7 @@ class MenuPrincipal:
         self.fonte_titulo = pygame.font.SysFont("Arial", 40, bold=True)
 
     def tem_algum_carro(self):
-        return self.chevette_comprado
+        return self.chevette_comprado or self.corsa_comprado or self.gol_comprado
 
     def atualizar_opcoes_menu(self):
         if self.tem_algum_carro():
@@ -94,7 +94,9 @@ class MenuPrincipal:
         config['PROGRESSO'] = {
             'creditos': str(self.creditos),
             'chevette_comprado': str(self.chevette_comprado),
-            'motorista_nome': str(self.motorista_nome) # Salvando o nome no arquivo permanentemente
+            'corsa_comprado': str(self.corsa_comprado),
+            'gol_comprado': str(self.gol_comprado),
+            'motorista_nome': str(self.motorista_nome)
         }
         with open(self.arquivo_save, 'w') as f:
             config.write(f)
@@ -105,8 +107,10 @@ class MenuPrincipal:
             config.read(self.arquivo_save)
             if 'PROGRESSO' in config:
                 self.creditos = config.getint('PROGRESSO', 'creditos', fallback=1100)
-                self.chevette_comprado = config.getboolean('PROGRESSO', 'chevette_comprado', fallback=False)
-                self.motorista_nome = config.get('PROGRESSO', 'motorista_nome', fallback="") # Carregando o nome salvo
+                self.chevette_comprado = config.getboolean('PROGRESSO', 'chevette_comprado', fallback=True)
+                self.corsa_comprado = config.getboolean('PROGRESSO', 'corsa_comprado', fallback=False)
+                self.gol_comprado = config.getboolean('PROGRESSO', 'gol_comprado', fallback=False)
+                self.motorista_nome = config.get('PROGRESSO', 'motorista_nome', fallback="")
         else:
             self.salvar_progresso()
 
@@ -179,6 +183,8 @@ class MenuPrincipal:
         
         meus_carros_ids = []
         if self.chevette_comprado: meus_carros_ids.append("chevette")
+        if self.corsa_comprado: meus_carros_ids.append("corsa")
+        if self.gol_comprado: meus_carros_ids.append("gol")
         
         idx_garagem = 0
         id_atual = meus_carros_ids[idx_garagem]
@@ -206,7 +212,15 @@ class MenuPrincipal:
                     pygame.quit()
                     sys.exit()
                 elif evento.type == pygame.KEYDOWN:
-                    if evento.key == pygame.K_RETURN or evento.key == pygame.K_KP_ENTER:
+                    if evento.key in [pygame.K_DOWN, pygame.K_s]:
+                        idx_garagem = (idx_garagem + 1) % len(meus_carros_ids)
+                        bipe_mover.play()
+                        self.audio.falar(self.dados_carros[meus_carros_ids[idx_garagem]]['nome'])
+                    elif evento.key in [pygame.K_UP, pygame.K_w]:
+                        idx_garagem = (idx_garagem - 1) % len(meus_carros_ids)
+                        bipe_mover.play()
+                        self.audio.falar(self.dados_carros[meus_carros_ids[idx_garagem]]['nome'])
+                    elif evento.key == pygame.K_RETURN or evento.key == pygame.K_KP_ENTER:
                         bipe_conf.play()
                         pygame.time.wait(150)
                         self.abrir_detalhes_carro(meus_carros_ids[idx_garagem], tela, relogio)
@@ -234,14 +248,18 @@ class MenuPrincipal:
             id_focado = self.lista_concessionaria[self.indice_concessionaria]
             carro = self.dados_carros[id_focado]
             
-            if id_focado == "chevette":
-                status_txt = "Já Comprado" if self.chevette_comprado else "Única Unidade!"
-            else:
-                status_txt = "ACABOU DO ESTOQUE"
+            ja_comprado = False
+            if id_focado == "chevette" and self.chevette_comprado: ja_comprado = True
+            elif id_focado == "corsa" and self.corsa_comprado: ja_comprado = True
+            elif id_focado == "gol" and self.gol_comprado: ja_comprado = True
+            
+            status_txt = "Já Comprado" if ja_comprado else "Disponível!"
+            if id_focado == "chevette" and not self.chevette_comprado:
+                status_txt = "Única Unidade!"
             
             txt_nome = self.fonte.render(f"Carro: {carro['nome']}", True, self.COR_TEXTO_SELECIONADO)
-            txt_preco = self.fonte.render(f"Preço: {carro['preco']} Créditos" if id_focado == "chevette" else "Preço: Indisponível", True, self.COR_TEXTO_NORMAL)
-            txt_status = self.fonte.render(f"Estoque: {status_txt}", True, (255, 100, 100) if id_focado != "chevette" else (100, 255, 100))
+            txt_preco = self.fonte.render(f"Preço: {carro['preco']} Créditos", True, self.COR_TEXTO_NORMAL)
+            txt_status = self.fonte.render(f"Estoque: {status_txt}", True, (255, 100, 100) if ja_comprado else (100, 255, 100))
             
             tela.blit(txt_nome, (50, 120))
             tela.blit(txt_preco, (50, 170))
@@ -269,24 +287,29 @@ class MenuPrincipal:
                     
                     elif evento.key == pygame.K_RETURN or evento.key == pygame.K_KP_ENTER:
                         id_focado = self.lista_concessionaria[self.indice_concessionaria]
+                        carro = self.dados_carros[id_focado]
                         
-                        if id_focado != "chevette":
+                        ja_comprado = False
+                        if id_focado == "chevette" and self.chevette_comprado: ja_comprado = True
+                        elif id_focado == "corsa" and self.corsa_comprado: ja_comprado = True
+                        elif id_focado == "gol" and self.gol_comprado: ja_comprado = True
+                        
+                        if ja_comprado:
                             self.gerar_bipe_menu(400, 150).play()
-                            self.audio.falar("Não é possível comprar. Este modelo acabou do estoque.")
+                            self.audio.falar(f"Você já tem o {carro['nome']} na sua garagem!")
+                        elif self.creditos >= carro['preco']:
+                            self.creditos -= carro['preco']
+                            if id_focado == "chevette": self.chevette_comprado = True
+                            elif id_focado == "corsa": self.corsa_comprado = True
+                            elif id_focado == "gol": self.gol_comprado = True
+                            
+                            self.salvar_progresso()
+                            self.atualizar_opcoes_menu()
+                            self.gerar_bipe_menu(900, 300).play()
+                            self.audio.falar(f"Sucesso! Você comprou o {carro['nome']}! Ele foi enviado para a sua garagem.")
                         else:
-                            if self.chevette_comprado:
-                                self.gerar_bipe_menu(400, 150).play()
-                                self.audio.falar("Você já estacionou este Chevette na sua garagem!")
-                            elif self.creditos >= 1000:
-                                self.creditos -= 1000
-                                self.chevette_comprado = True
-                                self.salvar_progresso()
-                                self.atualizar_opcoes_menu()
-                                self.gerar_bipe_menu(900, 300).play()
-                                self.audio.falar("Sucesso! Você comprou o Chevette rústico! Ele foi enviado para a sua garagem.")
-                            else:
-                                self.gerar_bipe_menu(400, 150).play()
-                                self.audio.falar("Saldo insuficiente.")
+                            self.gerar_bipe_menu(400, 150).play()
+                            self.audio.falar("Saldo insuficiente.")
                             
                     elif evento.key == pygame.K_ESCAPE:
                         self.audio.falar("Voltando ao menu principal.")
@@ -361,5 +384,63 @@ class MenuPrincipal:
                             self.gerar_bipe_menu(400, 150).play()
                             self.audio.falar(f"{escolha}, desativado.")
 
+            pygame.display.flip()
+            relogio.tick(60)
+
+    def abrir_selecao_carro(self, tela, relogio):
+        bipe_mover = self.gerar_bipe_menu(600, 50)
+        bipe_conf = self.gerar_bipe_menu(900, 150)
+        
+        meus_carros_ids = []
+        if self.chevette_comprado: meus_carros_ids.append("chevette")
+        if self.corsa_comprado: meus_carros_ids.append("corsa")
+        if self.gol_comprado: meus_carros_ids.append("gol")
+        
+        if not meus_carros_ids:
+            self.audio.falar("Você não tem nenhum carro comprado na garagem! Visite a concessionária.")
+            return None
+            
+        idx_selecionado = 0
+        id_atual = meus_carros_ids[idx_selecionado]
+        self.audio.falar(f"Escolha um carro para a carreira. Selecionado: {self.dados_carros[id_atual]['nome']}. Pressione Enter para confirmar.")
+
+        executando = True
+        while executando:
+            tela.fill((15, 15, 20))
+            txt_titulo = self.fonte_titulo.render("ESCOLHA SEU CARRO", True, (255, 255, 255))
+            tela.blit(txt_titulo, (40, 30))
+            
+            for i, cid in enumerate(meus_carros_ids):
+                nome_c = self.dados_carros[cid]["nome"]
+                if i == idx_selecionado:
+                    texto = self.fonte.render(f"> {nome_c} <", True, self.COR_TEXTO_SELECIONADO)
+                else:
+                    texto = self.fonte.render(f"  {nome_c}", True, self.COR_TEXTO_NORMAL)
+                tela.blit(texto, (50, 120 + (i * 45)))
+                
+            txt_ajuda = self.fonte.render("[Enter] Escolher  [ESC] Cancelar", True, (100, 100, 100))
+            tela.blit(txt_ajuda, (30, 350))
+            
+            for evento in pygame.event.get():
+                if evento.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif evento.type == pygame.KEYDOWN:
+                    if evento.key in [pygame.K_DOWN, pygame.K_s]:
+                        idx_selecionado = (idx_selecionado + 1) % len(meus_carros_ids)
+                        bipe_mover.play()
+                        self.audio.falar(self.dados_carros[meus_carros_ids[idx_selecionado]]['nome'])
+                    elif evento.key in [pygame.K_UP, pygame.K_w]:
+                        idx_selecionado = (idx_selecionado - 1) % len(meus_carros_ids)
+                        bipe_mover.play()
+                        self.audio.falar(self.dados_carros[meus_carros_ids[idx_selecionado]]['nome'])
+                    elif evento.key == pygame.K_RETURN or evento.key == pygame.K_KP_ENTER:
+                        bipe_conf.play()
+                        pygame.time.wait(150)
+                        return meus_carros_ids[idx_selecionado]
+                    elif evento.key == pygame.K_ESCAPE:
+                        self.audio.falar("Seleção de carro cancelada.")
+                        return None
+                        
             pygame.display.flip()
             relogio.tick(60)

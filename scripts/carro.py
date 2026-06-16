@@ -20,13 +20,9 @@ class Carro:
         self.ultimo_tque_arranque = 0
         self.tentando_partida = False
 
-        # --- MOTOR 1.6 OHC AUTOMÁTICO REALISTA ---
         self.velocidade = 0.0
         self.rpm_lenta = 750  
         self.rpm = 0.0 
-        self.rpm_max = 6500  
-        self.rev_limiter = 6000  
-
         self.acelerador = 0.0
         self.acelerador_antigo = 0.0 
 
@@ -39,13 +35,6 @@ class Carro:
         # Gerenciador de trocas automáticas (Histerese para evitar travamentos)
         self.tempo_ultima_troca = 0 
         
-        # Relações de marcha reais do Chevette automático de 3 velocidades
-        self.config_marchas_auto = {
-            1: {"vel_max": 50.0,  "forca": 0.48, "rpm_up": 4500},
-            2: {"vel_max": 95.0,  "forca": 0.28, "rpm_up": 5000, "rpm_down": 1800},
-            3: {"vel_max": 140.0, "forca": 0.16, "rpm_down": 2000}
-        }
-
         self.som_ligar = "audio/carro_motor/ligar.wav"
         self.som_marcha = "audio/carro_motor/marcha.wav"
         self.som_freio = "audio/carro_motor/freio.wav"
@@ -55,15 +44,48 @@ class Carro:
         self.pipocos_restantes_tirada = 0
         self.ultimo_pipoco_tirada = 0
 
+        # Define o modelo padrão (Chevette) na inicialização
+        self.definir_modelo("chevette")
+
+    def definir_modelo(self, modelo):
+        self.modelo = modelo
+        if modelo == "chevette":
+            self.nome = "Chevette Rústico"
+            self.rpm_max = 6500
+            self.rev_limiter = 6000
+            self.config_marchas_auto = {
+                1: {"vel_max": 50.0,  "forca": 0.48, "rpm_up": 4500},
+                2: {"vel_max": 95.0,  "forca": 0.28, "rpm_up": 5000, "rpm_down": 1800},
+                3: {"vel_max": 140.0, "forca": 0.16, "rpm_down": 2000}
+            }
+        elif modelo == "corsa":
+            self.nome = "Corsa Wind"
+            self.rpm_max = 6800
+            self.rev_limiter = 6300
+            self.config_marchas_auto = {
+                1: {"vel_max": 45.0,  "forca": 0.55, "rpm_up": 4200},
+                2: {"vel_max": 85.0,  "forca": 0.35, "rpm_up": 4800, "rpm_down": 1800},
+                3: {"vel_max": 145.0, "forca": 0.20, "rpm_down": 2000}
+            }
+        elif modelo == "gol":
+            self.nome = "Gol Quadrado"
+            self.rpm_max = 7200
+            self.rev_limiter = 6700
+            self.config_marchas_auto = {
+                1: {"vel_max": 55.0,  "forca": 0.65, "rpm_up": 4500},
+                2: {"vel_max": 105.0, "forca": 0.40, "rpm_up": 5200, "rpm_down": 1800},
+                3: {"vel_max": 165.0, "forca": 0.25, "rpm_down": 2000}
+            }
+
     def entrar_sair(self):
         self.no_carro = not self.no_carro
         if self.no_carro:
-            self.audio.falar("Você entrou no Chevette")
+            self.audio.falar(f"Você entrou no {self.nome}")
         else:
             if self.motor_ligado:
                 self.ligar_desligar_motor(desligar_forcado=True)
             self.velocidade = 0
-            self.audio.falar("Você saiu do Chevette")
+            self.audio.falar(f"Você saiu do {self.nome}")
 
     def ligar_desligar_motor(self, desligar_forcado=False, motivo=""):
         if self.motor_ligado or desligar_forcado:
@@ -80,7 +102,7 @@ class Carro:
             if motivo: 
                 self.audio.falar(motivo)
             else: 
-                self.audio.falar("Motor do Chevette desligado")
+                self.audio.falar(f"Motor do {self.nome} desligado")
                 
             if random.random() < 0.80: 
                 self.audio.tocar_pipoco_unico()
@@ -128,7 +150,11 @@ class Carro:
             self.temperatura_motor -= 0.005
 
         # Partida rústica com chave segurada
-        if self.no_carro and not self.motor_ligado and tecla_partida_segurada:
+        if not self.motor_ligado and tecla_partida_segurada:
+            if not self.no_carro:
+                self.no_carro = True
+                self.audio.falar(f"Você entrou no {self.nome}")
+
             if self.modo_atual not in ["P", "N"]:
                 return
 
