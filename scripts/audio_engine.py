@@ -112,6 +112,10 @@ class AudioEngine:
             tempo_osc = pygame.time.get_ticks() / 80.0
             mix_final *= (1.0 + math.sin(tempo_osc) * 0.08)
 
+        # Reduz o volume geral do motor se o vidro estiver fechado
+        if not self.vidro_aberto_atual:
+            mix_final *= 0.45
+
         outdata[:] = mix_final
 
     # SISTEMA DE LOOP SUAVE: Usa fade de 50ms para maquiar e cortar o final bugado do arquivo
@@ -178,6 +182,10 @@ class AudioEngine:
         if self.som_pipoco_objeto is None: return
         volume_aleatorio = random.uniform(1.2, 1.5)
         
+        # Reduz volume do pipoco se o vidro estiver fechado
+        if not self.vidro_aberto_atual:
+            volume_aleatorio *= 0.45
+            
         if self.usar_canal_a:
             self.canal_pipoco_a.set_volume(volume_aleatorio)
             self.canal_pipoco_a.play(self.som_pipoco_objeto)
@@ -189,7 +197,10 @@ class AudioEngine:
 
     def tocar_pipoco_unico(self):
         if self.som_pipoco_objeto is None: return
-        self.canal_pipoco_a.set_volume(1.5)
+        vol = 1.5
+        if not self.vidro_aberto_atual:
+            vol *= 0.45
+        self.canal_pipoco_a.set_volume(vol)
         self.canal_pipoco_a.play(self.som_pipoco_objeto)
 
     def tocar(self, caminho_som):

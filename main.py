@@ -1,5 +1,6 @@
 import pygame
 import sys
+import os
 import numpy as np
 import math
 from scripts.audio_engine import AudioEngine
@@ -18,6 +19,7 @@ relogio = pygame.time.Clock()
 audio = AudioEngine()
 carro = Carro(audio)
 jogador = Jogador(audio)
+carregar_som_rodas(carro.modelo)
 mapa = MapaCidade()
 menu = MenuPrincipal(audio)
 
@@ -50,6 +52,32 @@ carregar_e_tocar_loop("lama", "audio/pista_ambiente/lama_loop.wav")
 carregar_e_tocar_loop("estrada", "audio/pista_ambiente/estrada_loop.wav")
 carregar_e_tocar_loop("rua", "audio/pista_ambiente/rua_loop.wav")
 
+# --- SISTEMA DE SOM DE RODAS ---
+canal_rodas = pygame.mixer.Channel(15)
+som_rodas = None
+
+def carregar_som_rodas(modelo):
+    global som_rodas
+    try:
+        canal_rodas.stop()
+    except:
+        pass
+    som_rodas = None
+    
+    # Procura por Rodas.ogg, rodas.ogg, Rodas.wav ou rodas.wav na pasta dentro/
+    for nome in ["Rodas.ogg", "rodas.ogg", "Rodas.wav", "rodas.wav"]:
+        caminho = f"audio/carros/{modelo}/dentro/{nome}"
+        caminho_abs = obter_caminho_recurso(caminho)
+        if os.path.exists(caminho_abs):
+            try:
+                som_rodas = pygame.mixer.Sound(caminho_abs)
+                canal_rodas.play(som_rodas, loops=-1)
+                canal_rodas.set_volume(0.0)
+                print(f"Som de rodas carregado para {modelo}: {caminho}")
+                break
+            except Exception as e:
+                print(f"Erro ao carregar som de rodas {caminho}: {e}")
+
 def gerar_bipe_codigo(frequencia, duracao, vol_esq=1.0, vol_dir=1.0):
     amostragem = 44100
     num_amostras = int(duracao * (amostragem / 1000.0))
@@ -80,6 +108,7 @@ while rodando_geral:
                 continue
             carro.definir_modelo(carro_escolhido)
             carro.no_carro = False
+            carregar_som_rodas(carro_escolhido)
             
             # Recarrega os sons de pista e pneus de acordo com as especificidades do novo carro
             for tipo in canais_piso:
@@ -199,9 +228,18 @@ while rodando_geral:
                     canais_piso[tipo].set_volume(volume_alvo)
                 else:
                     canais_piso[tipo].set_volume(0.0)
+            
+            # Controle do canal de Rodas
+            if not carro.vidro_aberto and som_rodas is not None:
+                # O som de rodas roda apenas com o vidro fechado, independente do piso
+                volume_rodas = min(carro.velocidade / 60.0, 0.8)
+                canal_rodas.set_volume(volume_rodas)
+            else:
+                canal_rodas.set_volume(0.0)
         else:
             for tipo in canais_piso:
                 canais_piso[tipo].set_volume(0.0)
+            canal_rodas.set_volume(0.0)
 
     # Adicionado fundo visual simples para a caixa de texto renderizar profissionalmente
     tela.fill((10, 10, 15))
