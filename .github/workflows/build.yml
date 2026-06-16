@@ -1,0 +1,42 @@
+name: Compile Game Executable
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Single EXE (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install System Dependencies
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: Install Python Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build Single Executable with PyInstaller
+        run: |
+          pyinstaller --onefile --noconsole --name "BeaterDriver" --add-data "audio;audio" --add-data "mapas;mapas" --add-data "dados;dados" main.py
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BeaterDriver-Windows
+          path: dist/BeaterDriver.exe
