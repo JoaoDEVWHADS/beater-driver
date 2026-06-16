@@ -22,48 +22,51 @@ class MenuPrincipal:
         
         # Dados de Progresso do Jogador (Carregados ou Padrão)
         self.creditos = 1100  
-        self.chevette_comprado = True
-        self.gol_comprado = False
-        self.corsa_comprado = False
+        self.carros_comprados = ["chevette"]
         self.motorista_nome = "" # Armazena o nome customizado do motorista
         
         self.carregar_progresso()
 
+        # Definição dos Carros do Jogo (Banco de dados interno - Carregado Dinamicamente!)
+        self.dados_carros = {}
+        self.lista_concessionaria = []
+        self.indice_concessionaria = 0
 
-        # Definição dos Carros do Jogo (Banco de dados interno)
-        self.dados_carros = {
-            "chevette": {
+        # Escanear pasta de carros dinamicamente
+        from scripts.config import obter_caminho_recurso
+        pasta_carros = obter_caminho_recurso("audio/carros")
+        if os.path.exists(pasta_carros):
+            for item in sorted(os.listdir(pasta_carros)):
+                caminho_item = os.path.join(pasta_carros, item)
+                if os.path.isdir(caminho_item):
+                    ini_path = os.path.join(caminho_item, "carro.ini")
+                    if os.path.exists(ini_path):
+                        try:
+                            car_config = configparser.ConfigParser()
+                            car_config.read(ini_path, encoding='utf-8')
+                            if 'CARRO' in car_config:
+                                car_id = item
+                                self.dados_carros[car_id] = {
+                                    "nome": car_config.get('CARRO', 'nome', fallback=car_id.capitalize()),
+                                    "preco": car_config.getint('CARRO', 'preco', fallback=1000),
+                                    "info_concessionaria": car_config.get('CARRO', 'info_concessionaria', fallback=""),
+                                    "historico": car_config.get('CARRO', 'historico', fallback=""),
+                                    "pecas": [p.strip() for p in car_config.get('CARRO', 'pecas', fallback="").split(",") if p.strip()]
+                                }
+                                self.lista_concessionaria.append(car_id)
+                        except Exception as e:
+                            print(f"Erro ao ler {ini_path}: {e}")
+
+        # Se por algum motivo não carregou nada, adiciona um fallback básico
+        if not self.dados_carros:
+            self.dados_carros["chevette"] = {
                 "nome": "Chevette Rústico",
                 "preco": 1000,
-                "info_concessionaria": "Chevette Rústico. Preço: Mil créditos. Motor: Três cilindros adaptado. Única unidade disponível em estoque!",
-                "historico": (
-                    "Chevette Mil novecento e oitenta e cinco. Esse carro pertenceu a um velho mecânico "
-                    "da cidade que cuidava dele como um filho. Infelizmente, após uma crise financeira, "
-                    "o antigo dono precisou vender o motor original de quatro cilindros e todas as peças de performance "
-                    "para pagar dívidas. Para não ver o carro morrer na sucata, ele adaptou um motor moderno de "
-                    "três cilindros que sobrou de um projeto acidentado. É um carro cansado, manco, mas pronto para ser reerguido."
-                ),
-                "pecas": ["Motor 1.0 Três Cilindros Aspirado", "Carburador Simples de Moto Adaptado", "Câmbio de 5 Marchas Longo", "Escapamento Direto com Pipoco de Baixa Compressão"]
-            },
-            "corsa": {
-                "nome": "Corsa Wind",
-                "preco": 10000,
-                "info_concessionaria": "Corsa Wind Um Ponto Zero. Preço: Dez mil créditos. Carro econômico e prático para o trânsito!",
-                "historico": "Corsa Wind Um Ponto Zero. Hatch clássico dos anos noventa muito confiável, mecânica simples e baixo consumo.",
-                "pecas": ["Motor 1.0 MPFI 4 Cilindros", "Injeção Eletrônica Multiponto", "Câmbio de 5 Marchas Curto", "Escapamento Silencioso Original"]
-            },
-            "gol": {
-                "nome": "Gol Quadrado",
-                "preco": 12000,
-                "info_concessionaria": "Gol Quadrado Um Ponto Seis AP. Preço: Doze mil créditos. Muito potente, clássico e robusto!",
-                "historico": "Gol Quadrado Um Ponto Seis com motor AP. O queridinho das ruas brasileiras, excelente torque, muito robusto e de fácil preparação.",
-                "pecas": ["Motor AP 1.6", "Carburador Web 2E Regulado", "Câmbio AP de 5 Marchas Longo", "Escapamento Esportivo JK"]
+                "info_concessionaria": "Chevette Rústico. Preço: Mil créditos. Única unidade em estoque!",
+                "historico": "Chevette adaptado.",
+                "pecas": ["Motor 1.0"]
             }
-        }
-
-        # Ordem de exibição na Concessionária
-        self.lista_concessionaria = ["chevette", "corsa", "gol"]
-        self.indice_concessionaria = 0
+            self.lista_concessionaria.append("chevette")
 
         # Opções do menu principal
         self.opcoes = []
@@ -79,7 +82,7 @@ class MenuPrincipal:
         self.fonte_titulo = pygame.font.SysFont("Arial", 40, bold=True)
 
     def tem_algum_carro(self):
-        return self.chevette_comprado or self.corsa_comprado or self.gol_comprado
+        return len(self.carros_comprados) > 0
 
     def atualizar_opcoes_menu(self):
         if self.tem_algum_carro():
@@ -93,9 +96,7 @@ class MenuPrincipal:
         config = configparser.ConfigParser()
         config['PROGRESSO'] = {
             'creditos': str(self.creditos),
-            'chevette_comprado': str(self.chevette_comprado),
-            'corsa_comprado': str(self.corsa_comprado),
-            'gol_comprado': str(self.gol_comprado),
+            'carros_comprados': ",".join(self.carros_comprados),
             'motorista_nome': str(self.motorista_nome)
         }
         with open(self.arquivo_save, 'w') as f:
@@ -107,9 +108,10 @@ class MenuPrincipal:
             config.read(self.arquivo_save)
             if 'PROGRESSO' in config:
                 self.creditos = config.getint('PROGRESSO', 'creditos', fallback=1100)
-                self.chevette_comprado = config.getboolean('PROGRESSO', 'chevette_comprado', fallback=True)
-                self.corsa_comprado = config.getboolean('PROGRESSO', 'corsa_comprado', fallback=False)
-                self.gol_comprado = config.getboolean('PROGRESSO', 'gol_comprado', fallback=False)
+                carros_str = config.get('PROGRESSO', 'carros_comprados', fallback="chevette")
+                self.carros_comprados = [c.strip() for c in os.path.expandvars(carros_str).split(",") if c.strip()]
+                if "chevette" not in self.carros_comprados:
+                    self.carros_comprados.append("chevette")
                 self.motorista_nome = config.get('PROGRESSO', 'motorista_nome', fallback="")
         else:
             self.salvar_progresso()
@@ -181,10 +183,7 @@ class MenuPrincipal:
         bipe_mover = self.gerar_bipe_menu(600, 50)
         bipe_conf = self.gerar_bipe_menu(900, 150)
         
-        meus_carros_ids = []
-        if self.chevette_comprado: meus_carros_ids.append("chevette")
-        if self.corsa_comprado: meus_carros_ids.append("corsa")
-        if self.gol_comprado: meus_carros_ids.append("gol")
+        meus_carros_ids = self.carros_comprados
         
         idx_garagem = 0
         id_atual = meus_carros_ids[idx_garagem]
@@ -248,13 +247,9 @@ class MenuPrincipal:
             id_focado = self.lista_concessionaria[self.indice_concessionaria]
             carro = self.dados_carros[id_focado]
             
-            ja_comprado = False
-            if id_focado == "chevette" and self.chevette_comprado: ja_comprado = True
-            elif id_focado == "corsa" and self.corsa_comprado: ja_comprado = True
-            elif id_focado == "gol" and self.gol_comprado: ja_comprado = True
-            
+            ja_comprado = id_focado in self.carros_comprados
             status_txt = "Já Comprado" if ja_comprado else "Disponível!"
-            if id_focado == "chevette" and not self.chevette_comprado:
+            if id_focado == "chevette" and "chevette" not in self.carros_comprados:
                 status_txt = "Única Unidade!"
             
             txt_nome = self.fonte.render(f"Carro: {carro['nome']}", True, self.COR_TEXTO_SELECIONADO)
@@ -289,19 +284,14 @@ class MenuPrincipal:
                         id_focado = self.lista_concessionaria[self.indice_concessionaria]
                         carro = self.dados_carros[id_focado]
                         
-                        ja_comprado = False
-                        if id_focado == "chevette" and self.chevette_comprado: ja_comprado = True
-                        elif id_focado == "corsa" and self.corsa_comprado: ja_comprado = True
-                        elif id_focado == "gol" and self.gol_comprado: ja_comprado = True
+                        ja_comprado = id_focado in self.carros_comprados
                         
                         if ja_comprado:
                             self.gerar_bipe_menu(400, 150).play()
                             self.audio.falar(f"Você já tem o {carro['nome']} na sua garagem!")
                         elif self.creditos >= carro['preco']:
                             self.creditos -= carro['preco']
-                            if id_focado == "chevette": self.chevette_comprado = True
-                            elif id_focado == "corsa": self.corsa_comprado = True
-                            elif id_focado == "gol": self.gol_comprado = True
+                            self.carros_comprados.append(id_focado)
                             
                             self.salvar_progresso()
                             self.atualizar_opcoes_menu()

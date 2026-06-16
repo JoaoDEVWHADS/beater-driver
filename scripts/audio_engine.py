@@ -24,6 +24,7 @@ class AudioEngine:
         
         self.usar_canal_a = True
 
+        self.carregar_matriz_audio_func = None
         def carregar_matriz_audio(caminho):
             try:
                 som = pygame.mixer.Sound(obter_caminho_recurso(caminho))
@@ -34,16 +35,10 @@ class AudioEngine:
             except Exception as e:
                 print(f"Erro ao carregar {caminho}: {e}")
                 return None
+        self.carregar_matriz_audio_func = carregar_matriz_audio
 
-        self.dados_idle = carregar_matriz_audio("audio/carro_motor/idle.wav")
-        self.dados_low  = carregar_matriz_audio("audio/carro_motor/low.wav")
-        self.dados_mid  = carregar_matriz_audio("audio/carro_motor/mid.wav")
-        self.dados_high = carregar_matriz_audio("audio/carro_motor/high.wav")
-        
-        try:
-            self.som_pipoco_objeto = pygame.mixer.Sound(obter_caminho_recurso("audio/carro_motor/pipoco.wav"))
-        except:
-            self.som_pipoco_objeto = None
+        self.som_pipoco_objeto = None
+        self.carregar_sons_motor("chevette")
 
         self.taxa_amostragem = 44100
         self.motor_rodando = False
@@ -203,3 +198,24 @@ class AudioEngine:
             self.canal_sfx.play(som)
         except Exception as e:
             print(f"Erro ao tocar SFX {caminho_som}: {e}")
+
+    def carregar_sons_motor(self, modelo):
+        import os
+        from scripts.config import obter_caminho_recurso
+        
+        def resolver_caminho(nome_arquivo):
+            caminho_modelo = f"audio/carros/{modelo}/{nome_arquivo}"
+            if os.path.exists(obter_caminho_recurso(caminho_modelo)):
+                return caminho_modelo
+            return f"audio/carros/chevette/{nome_arquivo}"
+
+        self.dados_idle = self.carregar_matriz_audio_func(resolver_caminho("idle.wav"))
+        self.dados_low  = self.carregar_matriz_audio_func(resolver_caminho("low.wav"))
+        self.dados_mid  = self.carregar_matriz_audio_func(resolver_caminho("mid.wav"))
+        self.dados_high = self.carregar_matriz_audio_func(resolver_caminho("high.wav"))
+        
+        try:
+            self.som_pipoco_objeto = pygame.mixer.Sound(obter_caminho_recurso(resolver_caminho("pipoco.wav")))
+        except Exception as e:
+            print(f"Erro ao carregar pipoco para {modelo}: {e}")
+            self.som_pipoco_objeto = None

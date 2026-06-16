@@ -48,34 +48,64 @@ class Carro:
         self.definir_modelo("chevette")
 
     def definir_modelo(self, modelo):
+        import os
+        import configparser
+        from scripts.config import obter_caminho_recurso
+
         self.modelo = modelo
-        if modelo == "chevette":
-            self.nome = "Chevette Rústico"
-            self.rpm_max = 6500
-            self.rev_limiter = 6000
-            self.config_marchas_auto = {
-                1: {"vel_max": 50.0,  "forca": 0.48, "rpm_up": 4500},
-                2: {"vel_max": 95.0,  "forca": 0.28, "rpm_up": 5000, "rpm_down": 1800},
-                3: {"vel_max": 140.0, "forca": 0.16, "rpm_down": 2000}
-            }
-        elif modelo == "corsa":
-            self.nome = "Corsa Wind"
-            self.rpm_max = 6800
-            self.rev_limiter = 6300
-            self.config_marchas_auto = {
-                1: {"vel_max": 45.0,  "forca": 0.55, "rpm_up": 4200},
-                2: {"vel_max": 85.0,  "forca": 0.35, "rpm_up": 4800, "rpm_down": 1800},
-                3: {"vel_max": 145.0, "forca": 0.20, "rpm_down": 2000}
-            }
-        elif modelo == "gol":
-            self.nome = "Gol Quadrado"
-            self.rpm_max = 7200
-            self.rev_limiter = 6700
-            self.config_marchas_auto = {
-                1: {"vel_max": 55.0,  "forca": 0.65, "rpm_up": 4500},
-                2: {"vel_max": 105.0, "forca": 0.40, "rpm_up": 5200, "rpm_down": 1800},
-                3: {"vel_max": 165.0, "forca": 0.25, "rpm_down": 2000}
-            }
+        
+        # Carrega as configurações físicas a partir do carro.ini correspondente
+        ini_path = obter_caminho_recurso(f"audio/carros/{modelo}/carro.ini")
+        config = configparser.ConfigParser()
+        
+        if os.path.exists(ini_path):
+            try:
+                config.read(ini_path, encoding='utf-8')
+            except Exception as e:
+                print(f"Erro ao ler {ini_path}: {e}")
+
+        # Fallback para Chevette se as chaves ou o arquivo não existirem
+        self.nome = config.get('CARRO', 'nome', fallback="Chevette Rústico")
+        self.rpm_lenta = config.getint('FISICA', 'rpm_lenta', fallback=750)
+        self.rpm_max = config.getint('FISICA', 'rpm_max', fallback=6500)
+        self.rev_limiter = config.getint('FISICA', 'rev_limiter', fallback=6000)
+        
+        # Carrega as marchas
+        self.config_marchas_auto = {}
+        for m in [1, 2, 3]:
+            secao = f"MARCHA_{m}"
+            if secao in config:
+                self.config_marchas_auto[m] = {
+                    "vel_max": config.getfloat(secao, "vel_max"),
+                    "forca": config.getfloat(secao, "forca")
+                }
+                if config.has_option(secao, "rpm_up"):
+                    self.config_marchas_auto[m]["rpm_up"] = config.getint(secao, "rpm_up")
+                if config.has_option(secao, "rpm_down"):
+                    self.config_marchas_auto[m]["rpm_down"] = config.getint(secao, "rpm_down")
+            else:
+                # Fallbacks manuais padrão caso a seção não exista no INI
+                if m == 1:
+                    self.config_marchas_auto[m] = {"vel_max": 50.0,  "forca": 0.48, "rpm_up": 4500}
+                elif m == 2:
+                    self.config_marchas_auto[m] = {"vel_max": 95.0,  "forca": 0.28, "rpm_up": 5000, "rpm_down": 1800}
+                elif m == 3:
+                    self.config_marchas_auto[m] = {"vel_max": 140.0, "forca": 0.16, "rpm_down": 2000}
+
+        # Configurações de som com fallback individual para o chevette
+        def obter_caminho_som(nome_arquivo):
+            caminho_modelo = f"audio/carros/{modelo}/{nome_arquivo}"
+            if os.path.exists(obter_caminho_recurso(caminho_modelo)):
+                return caminho_modelo
+            return f"audio/carros/chevette/{nome_arquivo}"
+
+        self.som_ligar = obter_caminho_som("ligar.wav")
+        self.som_marcha = obter_caminho_som("marcha.wav")
+        self.som_freio = obter_caminho_som("freio.wav")
+        
+        # Notificar o AudioEngine para reconfigurar as amostras de motor para este modelo/carro
+        if hasattr(self.audio, "carregar_sons_motor"):
+            self.audio.carregar_sons_motor(modelo)
 
     def entrar_sair(self):
         self.no_carro = not self.no_carro
