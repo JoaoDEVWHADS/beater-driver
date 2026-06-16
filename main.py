@@ -73,15 +73,26 @@ while rodando_geral:
             # Recarrega os sons de pista e pneus de acordo com as especificidades do novo carro
             try:
                 canal_asfalto.stop()
+            except:
+                pass
+            try:
                 canal_terra.stop()
+            except:
+                pass
+                
+            try:
                 som_loop_asfalto = pygame.mixer.Sound(obter_caminho_recurso(carro.som_asfalto))
-                som_loop_terra = pygame.mixer.Sound(obter_caminho_recurso(carro.som_terra))
                 canal_asfalto.play(som_loop_asfalto, loops=-1)
                 canal_asfalto.set_volume(0.0)
+            except Exception as e:
+                print(f"Aviso: Não foi possível carregar asfalto loop: {e}")
+                
+            try:
+                som_loop_terra = pygame.mixer.Sound(obter_caminho_recurso(carro.som_terra))
                 canal_terra.play(som_loop_terra, loops=-1)
                 canal_terra.set_volume(0.0)
             except Exception as e:
-                print(f"Erro ao carregar os loops de ambiente específicos do carro: {e}")
+                print(f"Aviso: Não foi possível carregar terra loop: {e}")
                 
             estado_jogo = "MODOLIVRE"
             uber.estado_app = "MODOLIVRE"
