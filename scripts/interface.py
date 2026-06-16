@@ -381,10 +381,7 @@ class MenuPrincipal:
         bipe_mover = self.gerar_bipe_menu(600, 50)
         bipe_conf = self.gerar_bipe_menu(900, 150)
         
-        meus_carros_ids = []
-        if self.chevette_comprado: meus_carros_ids.append("chevette")
-        if self.corsa_comprado: meus_carros_ids.append("corsa")
-        if self.gol_comprado: meus_carros_ids.append("gol")
+        meus_carros_ids = self.carros_comprados
         
         if not meus_carros_ids:
             self.audio.falar("Você não tem nenhum carro comprado na garagem! Visite a concessionária.")
