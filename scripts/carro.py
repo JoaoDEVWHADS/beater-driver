@@ -293,7 +293,7 @@ class Carro:
                 self.rpm = giro_base_arranque
                 self.audio.motor_rpm_velho(self.rpm / self.rpm_max, falhando=True)
                 
-                tempo_necessario = 3500 if acelerando else 5500
+                tempo_necessario = 2000
                 self.tempo_segurando_chave += 140
                 
                 if self.tempo_segurando_chave >= tempo_necessario:
