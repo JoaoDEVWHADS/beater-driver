@@ -179,20 +179,34 @@ class Carro:
                 self.sons_piso_fora[tipo] = caminho_custom
                 self.sons_piso_dentro[tipo] = caminho_custom
             else:
-                # Caso contrário, busca nas pastas dentro/ e fora/
+                # Caso contrário, busca nas pastas dentro/ e fora/ com suporte a .wav, .ogg e .mp3
                 # Para fora:
-                caminho_fora = f"audio/carros/{modelo}/fora/{tipo}_loop.wav"
-                if not os.path.exists(obter_caminho_recurso(caminho_fora)):
-                    caminho_fora = f"audio/pista_ambiente/{tipo}_loop.wav" # Fallback
+                caminho_fora = f"audio/pista_ambiente/{tipo}_loop.wav"
+                for ext in [".wav", ".ogg", ".mp3"]:
+                    teste_fora = f"audio/carros/{modelo}/fora/{tipo}_loop{ext}"
+                    if os.path.exists(obter_caminho_recurso(teste_fora)):
+                        caminho_fora = teste_fora
+                        break
                 self.sons_piso_fora[tipo] = caminho_fora
                 
                 # Para dentro:
-                caminho_dentro = f"audio/carros/{modelo}/dentro/{tipo}_loop.wav"
-                if not os.path.exists(obter_caminho_recurso(caminho_dentro)):
-                    # Se não tiver som de dentro exclusivo do carro, tenta do chevette/dentro/
-                    caminho_dentro = f"audio/carros/chevette/dentro/{tipo}_loop.wav"
-                    if not os.path.exists(obter_caminho_recurso(caminho_dentro)):
-                        caminho_dentro = caminho_fora # Fallback para o de fora
+                caminho_dentro = None
+                for ext in [".wav", ".ogg", ".mp3"]:
+                    teste_dentro = f"audio/carros/{modelo}/dentro/{tipo}_loop{ext}"
+                    if os.path.exists(obter_caminho_recurso(teste_dentro)):
+                        caminho_dentro = teste_dentro
+                        break
+                
+                if not caminho_dentro:
+                    for ext in [".wav", ".ogg", ".mp3"]:
+                        teste_chev = f"audio/carros/chevette/dentro/{tipo}_loop{ext}"
+                        if os.path.exists(obter_caminho_recurso(teste_chev)):
+                            caminho_dentro = teste_chev
+                            break
+                            
+                if not caminho_dentro:
+                    caminho_dentro = caminho_fora
+                    
                 self.sons_piso_dentro[tipo] = caminho_dentro
                 
         # Define os caminhos ativos no momento
@@ -295,7 +309,7 @@ class Carro:
                         if random.random() < 0.40: self.audio.tocar_pipoco_corte()
                 
                 self.rpm = giro_base_arranque
-                self.audio.motor_rpm_velho(self.rpm / self.rpm_max, falhando=True)
+                self.audio.motor_rpm_velho(self.rpm / self.rpm_max, falhando=True, acelerador=self.acelerador, modo_atual=self.modo_atual, velocidade=self.velocidade)
                 
                 tempo_necessario = 2000
                 self.tempo_segurando_chave += 140
@@ -436,4 +450,4 @@ class Carro:
 
         if self.motor_ligado:
             rpm_normal = max(0.0, min(1.0, (self.rpm / self.rpm_max) * 1.10))
-            self.audio.motor_rpm_velho(rpm_normal, self.cortando_giro)
+            self.audio.motor_rpm_velho(rpm_normal, self.cortando_giro, acelerador=self.acelerador, modo_atual=self.modo_atual, velocidade=self.velocidade)

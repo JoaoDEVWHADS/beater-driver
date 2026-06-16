@@ -54,6 +54,10 @@ class AudioEngine:
         self.rpm_alvo = 0.0
         self.rpm_atual = 0.0
 
+        self.acelerador_atual = 0.0
+        self.modo_atual = "N"
+        self.velocidade_atual = 0.0
+
     def falar(self, texto):
         self.fala.falar(texto)
 
@@ -78,11 +82,32 @@ class AudioEngine:
             vol_high = 1.10
             fator_pitch = 1.70 + random.uniform(-0.08, 0.08)
         else:
-            vol_idle = max(0.0, 1.0 - self.rpm_atual * 3.5)
-            vol_low  = max(0.0, 1.0 - abs(self.rpm_atual - 0.28) * 2.5)
-            vol_mid  = max(0.0, 1.0 - abs(self.rpm_atual - 0.60) * 2.5)
-            vol_high = max(0.0, 1.0 - abs(self.rpm_atual - 0.90) * 3.0)
-            fator_pitch = 0.75 + (self.rpm_atual * 1.15)
+            if hasattr(self, 'modelo_atual') and self.modelo_atual == "corolla":
+                # Idle volume: 1.0 when idle/stopped, fades out with accelerator or movement
+                vol_idle = max(0.0, 1.0 - self.acelerador_atual - (self.velocidade_atual / 10.0))
+                
+                if self.modo_atual in ["P", "N"]:
+                    # Stopped / Neutro / Park accelerating
+                    vol_low = self.acelerador_atual
+                    vol_mid = self.acelerador_atual
+                    vol_high = 0.0
+                else:
+                    # D or R (when in drive or re)
+                    vol_low = 0.0
+                    vol_mid = 0.0
+                    if self.acelerador_atual > 0:
+                        vol_high = self.acelerador_atual
+                    else:
+                        # moving with no throttle: proportional to velocity/rpm
+                        vol_high = max(0.0, min(0.3, self.rpm_atual * 0.4))
+                
+                fator_pitch = 0.8 + (self.rpm_atual * 0.9)
+            else:
+                vol_idle = max(0.0, 1.0 - self.rpm_atual * 3.5)
+                vol_low  = max(0.0, 1.0 - abs(self.rpm_atual - 0.28) * 2.5)
+                vol_mid  = max(0.0, 1.0 - abs(self.rpm_atual - 0.60) * 2.5)
+                vol_high = max(0.0, 1.0 - abs(self.rpm_atual - 0.90) * 3.0)
+                fator_pitch = 0.75 + (self.rpm_atual * 1.15)
 
         passo = fator_pitch
         indices = np.arange(frames) * passo
@@ -172,11 +197,14 @@ class AudioEngine:
                 pass
             self.stream = None
 
-    def motor_rpm_velho(self, rpm_normal, falhando=False):
+    def motor_rpm_velho(self, rpm_normal, falhando=False, acelerador=0.0, modo_atual="N", velocidade=0.0):
         if not self.motor_rodando or self.morrendo_natural:
             return
         self.falhando = falhando
         self.rpm_alvo = rpm_normal
+        self.acelerador_atual = acelerador
+        self.modo_atual = modo_atual
+        self.velocidade_atual = velocidade
 
     def tocar_pipoco_corte(self):
         if self.som_pipoco_objeto is None: return
