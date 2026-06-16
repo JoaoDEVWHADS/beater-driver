@@ -33,10 +33,10 @@ jobs:
 
       - name: Build Single Executable with PyInstaller
         run: |
-          pyinstaller --onefile --noconsole --name "BeaterDriver" --add-data "audio;audio" --add-data "mapas;mapas" --add-data "dados;dados" main.py
+          pyinstaller --onefile --noconsole --name "RideShareBrazil" --add-data "audio;audio" --add-data "mapas;mapas" --add-data "dados;dados" main.py
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BeaterDriver-Windows
-          path: dist/BeaterDriver.exe
+          name: RideShareBrazil-Windows
+          path: dist/RideShareBrazil.exe

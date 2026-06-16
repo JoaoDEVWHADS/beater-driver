@@ -1,4 +1,4 @@
-# Beater Driver: Brazilian Cab Simulator
+# Ride Share: Brazil - Cab Simulator
 
 An immersive, accessible **audiogame** simulating the life of a taxi/ride-sharing driver in Brazil, featuring real-time motor sound synthesis and multiple classic cars (Chevette, Corsa, Gol).
 
@@ -28,8 +28,8 @@ While on a trip, the GPS will emit **stereo panning beeps** to guide you:
 
 ## ⚙️ How Save Data Works
 Your progress (credits, driver profile, purchased cars) is saved automatically in the system's AppData directory to avoid loss when updating or running compiled executables:
-- **Windows**: `%APPDATA%/BeaterDriver/progresso.ini`
-- **Linux/macOS**: `~/.config/BeaterDriver/progresso.ini`
+- **Windows**: `%APPDATA%/RideShareBrazil/progresso.ini`
+- **Linux/macOS**: `~/.config/RideShareBrazil/progresso.ini`
 
 ---
 

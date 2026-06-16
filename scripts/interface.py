@@ -17,7 +17,7 @@ class MenuPrincipal:
         else:
             base_dir = os.path.expanduser("~/.config")
             
-        self.pasta_save = os.path.join(base_dir, "BeaterDriver")
+        self.pasta_save = os.path.join(base_dir, "RideShareBrazil")
         self.arquivo_save = os.path.join(self.pasta_save, "progresso.ini")
         
         # Dados de Progresso do Jogador (Carregados ou Padrão)
@@ -306,7 +306,7 @@ class MenuPrincipal:
         executando_menu = True
         while executando_menu:
             tela.fill(self.COR_FUNDO)
-            txt_titulo = self.fonte_titulo.render("BEATER DRIVER", True, (255, 255, 255))
+            txt_titulo = self.fonte_titulo.render("RIDE SHARE: BRAZIL", True, (255, 255, 255))
             tela.blit(txt_titulo, (40, 25))
             
             for i, opcao in enumerate(self.opcoes):

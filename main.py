@@ -12,7 +12,7 @@ from scripts.config import obter_caminho_recurso
 
 pygame.init()
 tela = pygame.display.set_mode((400, 420)) 
-pygame.display.set_caption("Beater Driver: Brazilian Cab Simulator")
+pygame.display.set_caption("Ride Share: Brazil")
 relogio = pygame.time.Clock()
 
 audio = AudioEngine()
