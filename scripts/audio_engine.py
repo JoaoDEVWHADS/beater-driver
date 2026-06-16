@@ -58,6 +58,11 @@ class AudioEngine:
         self.modo_atual = "N"
         self.velocidade_atual = 0.0
 
+        self.vol_idle_atual = 0.0
+        self.vol_low_atual = 0.0
+        self.vol_mid_atual = 0.0
+        self.vol_high_atual = 0.0
+
     def falar(self, texto):
         self.fala.falar(texto)
 
@@ -109,28 +114,39 @@ class AudioEngine:
                 vol_high = max(0.0, 1.0 - abs(self.rpm_atual - 0.90) * 3.0)
                 fator_pitch = 0.75 + (self.rpm_atual * 1.15)
 
+        # Smooth volume transitions (LERP)
+        if hasattr(self, 'modelo_atual') and self.modelo_atual == "corolla":
+            lerp_factor = 0.025
+        else:
+            lerp_factor = 0.08
+            
+        self.vol_idle_atual += (vol_idle - self.vol_idle_atual) * lerp_factor
+        self.vol_low_atual += (vol_low - self.vol_low_atual) * lerp_factor
+        self.vol_mid_atual += (vol_mid - self.vol_mid_atual) * lerp_factor
+        self.vol_high_atual += (vol_high - self.vol_high_atual) * lerp_factor
+
         passo = fator_pitch
         indices = np.arange(frames) * passo
         mix_final = np.zeros_like(outdata)
 
-        if self.dados_idle is not None and vol_idle > 0.0:
+        if self.dados_idle is not None and self.vol_idle_atual > 0.05:
             idx = ((self.pos_idle + indices) % len(self.dados_idle)).astype(np.int32)
-            mix_final += self.dados_idle[idx] * (vol_idle * 0.7)
+            mix_final += self.dados_idle[idx] * (self.vol_idle_atual * 0.7)
             self.pos_idle = (self.pos_idle + frames * passo) % len(self.dados_idle)
 
-        if self.dados_low is not None and vol_low > 0.0:
+        if self.dados_low is not None and self.vol_low_atual > 0.05:
             idx = ((self.pos_low + indices) % len(self.dados_low)).astype(np.int32)
-            mix_final += self.dados_low[idx] * (vol_low * 0.8)
+            mix_final += self.dados_low[idx] * (self.vol_low_atual * 0.8)
             self.pos_low = (self.pos_low + frames * passo) % len(self.dados_low)
 
-        if self.dados_mid is not None and vol_mid > 0.0:
+        if self.dados_mid is not None and self.vol_mid_atual > 0.05:
             idx = ((self.pos_mid + indices) % len(self.dados_mid)).astype(np.int32)
-            mix_final += self.dados_mid[idx] * (vol_mid * 0.9)
+            mix_final += self.dados_mid[idx] * (self.vol_mid_atual * 0.9)
             self.pos_mid = (self.pos_mid + frames * passo) % len(self.dados_mid)
 
-        if self.dados_high is not None and vol_high > 0.0:
+        if self.dados_high is not None and self.vol_high_atual > 0.05:
             idx = ((self.pos_high + indices) % len(self.dados_high)).astype(np.int32)
-            mix_final += self.dados_high[idx] * (vol_high * 1.25)
+            mix_final += self.dados_high[idx] * (self.vol_high_atual * 1.25)
             self.pos_high = (self.pos_high + frames * passo) % len(self.dados_high)
 
         if not self.falhando and self.rpm_atual < 0.15:
