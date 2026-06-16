@@ -418,7 +418,7 @@ class Carro:
             if teclas[pygame.K_s]:
                 self.velocidade = max(0.0, self.velocidade - 0.75)
                 if self.velocidade > 1.0 and tempo_atual % 300 < 30:
-                    vol_freio = 0.20 if not self.vidro_aberto else 0.8
+                    vol_freio = 0.05 if not self.vidro_aberto else 0.8
                     self.audio.tocar(self.som_freio, vol_freio)
 
             if self.modo_atual in ["D", "R"] and not acelerando:
