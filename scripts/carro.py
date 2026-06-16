@@ -133,15 +133,17 @@ class Carro:
                 nomes_tentativas.append(nome_arquivo[:-4] + ".wav")
                 nomes_tentativas.append(nome_arquivo[:-4] + ".mp3")
 
-            for nome in nomes_tentativas:
-                if subfolder:
+            if subfolder:
+                for nome in nomes_tentativas:
                     caminho_modelo = f"audio/carros/{modelo}/{subfolder}/{nome}"
                     if os.path.exists(obter_caminho_recurso(caminho_modelo)):
                         return caminho_modelo
+                for nome in nomes_tentativas:
                     caminho_chevette = f"audio/carros/chevette/{subfolder}/{nome}"
                     if os.path.exists(obter_caminho_recurso(caminho_chevette)):
                         return caminho_chevette
                         
+            for nome in nomes_tentativas:
                 caminho_modelo = f"audio/carros/{modelo}/{nome}"
                 if os.path.exists(obter_caminho_recurso(caminho_modelo)):
                     return caminho_modelo

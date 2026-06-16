@@ -229,18 +229,20 @@ class AudioEngine:
                 nomes_tentativas.append(nome_arquivo[:-4] + ".wav")
                 nomes_tentativas.append(nome_arquivo[:-4] + ".mp3")
 
+            # 1. Tenta achar na subpasta específica (fora/ ou dentro/) para QUALQUER extensão
             for nome in nomes_tentativas:
-                # 1. Tenta achar na subpasta específica (fora/ ou dentro/)
                 caminho_especifico = f"audio/carros/{modelo}/{subpasta}/{nome}"
                 if os.path.exists(obter_caminho_recurso(caminho_especifico)):
                     return caminho_especifico
                 
-                # 2. Se não achar, tenta achar na raiz da pasta do carro
+            # 2. Se não achar, tenta achar na raiz da pasta do carro para QUALQUER extensão
+            for nome in nomes_tentativas:
                 caminho_raiz_carro = f"audio/carros/{modelo}/{nome}"
                 if os.path.exists(obter_caminho_recurso(caminho_raiz_carro)):
                     return caminho_raiz_carro
                     
-                # 3. Fallback: tenta achar na subpasta correspondente do Chevette
+            # 3. Fallback: tenta achar na subpasta correspondente do Chevette
+            for nome in nomes_tentativas:
                 caminho_chevette_subpasta = f"audio/carros/chevette/{subpasta}/{nome}"
                 if os.path.exists(obter_caminho_recurso(caminho_chevette_subpasta)):
                     return caminho_chevette_subpasta
