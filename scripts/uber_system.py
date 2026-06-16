@@ -15,7 +15,7 @@ class UberSystem:
         self.cadastro_placa = ""
 
         # Controle de Corrida
-        self.estado_app = "MODOLIVRE" # MODOLIVRE, CELULAR_CADASTRO, CELULAR_MENU, ESPERANDO_CORRIDA, CHAMANDO, VIAGEM, CHEGOU
+        self.estado_app = "MODOLIVRE" # MODOLIVRE, CELULAR_CADASTRO, CELULAR_MENU, ESPERANDO_CORRIDA, CHAMANDO, VIAGEM, CHEGOU, CELULAR_BUSCA_CEP
         self.tempo_chamada = 0
         self.nome_passageiro = ""
         self.ganho_corrida = 0.0
@@ -37,6 +37,15 @@ class UberSystem:
             ("Beco do Chevette", "Beco do Chevette", 40, 180, -15, 15)
         ]
 
+        # Inicializando o GPS Real
+        from scripts.gps_real import GPSReal
+        self.gps = GPSReal(audio)
+        
+        # Controle de busca por CEP
+        self.cep_input = ""
+        self.numero_input = ""
+        self.campo_atual = "CEP" # "CEP" ou "NUMERO"
+
     def abrir_celular(self):
         if self.estado_app in ["MODOLIVRE", "CHEGOU"]:
             if not self.cadastro_feito:
@@ -46,8 +55,8 @@ class UberSystem:
                 self.audio.falar("Aplicativo Uber Driver. Para começar, digite seu nome e pressione Enter.")
             else:
                 self.estado_app = "CELULAR_MENU"
-                self.audio.falar(f"Olá {self.cadastro_nome}. Menu do Aplicativo. Pressione Espaço para ficar Online e procurar corridas.")
-        elif self.estado_app in ["CELULAR_MENU", "CELULAR_CADASTRO"]:
+                self.audio.falar(f"Olá {self.cadastro_nome}. Menu do Aplicativo. Pressione Espaço para ficar Online e procurar corridas, ou pressione 1 para definir um destino por CEP.")
+        elif self.estado_app in ["CELULAR_MENU", "CELULAR_CADASTRO", "CELULAR_BUSCA_CEP"]:
             self.estado_app = "MODOLIVRE"
             self.audio.falar("Celular guardado.")
 
@@ -69,6 +78,48 @@ class UberSystem:
             if caractere.isalnum() or caractere == " ":
                 self.cadastro_nome += caractere
                 self.audio.falar(caractere)
+
+    def tratar_entrada_cep(self, evento, carro):
+        if evento.key == pygame.K_RETURN:
+            if not self.cep_input:
+                self.audio.falar("Por favor, digite o CEP primeiro.")
+                return
+            
+            self.audio.falar(f"Buscando rota para CEP {self.cep_input} número {self.numero_input or 'sem número'}...")
+            self.gps.buscar_por_cep(self.cep_input, self.numero_input, carro.x, carro.y)
+            self.estado_app = "VIAGEM"
+            
+        elif evento.key == pygame.K_TAB:
+            if self.campo_atual == "CEP":
+                self.campo_atual = "NUMERO"
+                self.audio.falar(f"CEP definido como {self.cep_input}. Digite o número e pressione Enter para iniciar a busca.")
+            else:
+                self.campo_atual = "CEP"
+                self.audio.falar(f"Editando o CEP. CEP atual: {self.cep_input}.")
+                
+        elif evento.key == pygame.K_BACKSPACE:
+            if self.campo_atual == "CEP":
+                self.cep_input = self.cep_input[:-1]
+                if self.cep_input:
+                    self.audio.falar(self.cep_input[-1])
+                else:
+                    self.audio.falar("CEP vazio.")
+            else:
+                self.numero_input = self.numero_input[:-1]
+                if self.numero_input:
+                    self.audio.falar(self.numero_input[-1])
+                else:
+                    self.audio.falar("Número vazio.")
+        else:
+            caractere = evento.unicode
+            if self.campo_atual == "CEP":
+                if caractere.isdigit() or caractere == "-":
+                    self.cep_input += caractere
+                    self.audio.falar(caractere)
+            else:
+                if caractere.isdigit():
+                    self.numero_input += caractere
+                    self.audio.falar(caractere)
 
     def tratar_teclado_cadastro(self, tecla):
         mapa_teclas = {
@@ -118,7 +169,9 @@ class UberSystem:
             return
 
     def falar_gps(self, carro):
-        if self.estado_app == "VIAGEM":
+        if self.gps.destino_ativo:
+            self.gps.falar_status_viagem(carro.x, carro.y)
+        elif self.estado_app == "VIAGEM":
             dx = self.destino_x - carro.x
             dy = self.destino_y - carro.y
             distancia = math.sqrt(dx**2 + dy**2)
@@ -132,9 +185,12 @@ class UberSystem:
                 
             self.audio.falar(f"GPS: Destino na {self.nome_destino_rua}. Faltam {int(distancia)} metros. {direcao_texto}.")
         else:
-            self.audio.falar("O GPS está desligado pois você não está em uma corrida ativa.")
+            self.gps.falar_status_viagem(carro.x, carro.y)
 
     def atualizar_logica(self, tempo_atual, carro, gerar_bipe_func):
+        # Atualiza a lógica do GPS Real
+        self.gps.atualizar(carro.x, carro.y, tempo_atual)
+
         # Lógica de toque de chamada aleatória
         if self.estado_app == "ESPERANDO_CORRIDA":
             if tempo_atual - self.tempo_chamada > random.randint(4000, 8000):
@@ -167,35 +223,48 @@ class UberSystem:
 
         # Monitoramento da viagem em andamento
         if self.estado_app == "VIAGEM":
-            dx = self.destino_x - carro.x
-            dy = self.destino_y - carro.y
-            distancia_restante = math.sqrt(dx**2 + dy**2)
-
-            # Efeito sonoro sutil de GPS guiando (Bipe Estéreo conforme o lado)
-            if tempo_atual % 3000 < 30:
-                if dx > 30: # Destino está para a direita
-                    gerar_bipe_func(950, 80, 0.15, 1.0).play() 
-                elif dx < -30: # Destino está para a esquerda
-                    gerar_bipe_func(950, 80, 1.0, 0.15).play() 
-                else:
-                    gerar_bipe_func(600, 40, 0.4, 0.4).play() 
-
-            if carro.cortando_giro and tempo_atual % 4000 < 20:
-                self.audio.falar("O cliente reclama do barulho do motor!")
-
-            if tempo_atual % 7000 < 20 and distancia_restante > 30:
-                # O próprio GPS avisa o nome da rua de destino durante o trajeto de tempo em tempo
-                self.audio.falar(f"GPS: Siga em direção a {self.nome_destino_rua}. Faltam {int(distancia_restante)} metros.")
-
-            # Chegada no Destino (Ajustado para 30 metros de tolerância para ficar confortável estacionar na rua correta)
-            if distancia_restante <= 30.0:
-                self.estado_app = "CHEGOU"
-                carro.velocidade = 0.0
+            if self.gps.destino_ativo:
+                dx_dest = self.gps.destino_x - carro.x
+                dy_dest = self.gps.destino_y - carro.y
+                distancia_restante = math.sqrt(dx_dest**2 + dy_dest**2)
                 
-                # ADICIONANDO O DINHEIRO NA CARTEIRA REAL DO JOGO!
-                creditos_ganhos = int(self.ganho_corrida)
-                self.menu.creditos += creditos_ganhos
-                self.menu.salvar_progresso() # Grava no arquivo .ini de save automaticamente!
-                
-                self.audio.falar(f"Viagem concluída! Você chegou certinho na {self.nome_destino_rua}. Você recebeu {self.ganho_corrida} reais. Seu saldo agora é de {self.menu.creditos} créditos. Abra o celular com P para buscar a próxima.")
-                self.tempo_chamada = tempo_atual
+                if distancia_restante <= 25.0:
+                    self.gps.destino_ativo = False
+                    self.estado_app = "CHEGOU"
+                    carro.velocidade = 0.0
+                    creditos_ganhos = int(15.0 + (self.gps.distancia_total * 0.012))
+                    self.menu.creditos += creditos_ganhos
+                    self.menu.salvar_progresso()
+                    self.audio.falar(f"Viagem concluída! Você chegou certinho no destino. Você recebeu {creditos_ganhos} reais. Seu saldo agora é de {self.menu.creditos} créditos. Abra o celular com P para buscar a próxima.")
+                    self.tempo_chamada = tempo_atual
+            else:
+                dx = self.destino_x - carro.x
+                dy = self.destino_y - carro.y
+                distancia_restante = math.sqrt(dx**2 + dy**2)
+
+                # Efeito sonoro sutil de GPS guiando (Bipe Estéreo conforme o lado)
+                if tempo_atual % 3000 < 30:
+                    if dx > 30: # Destino está para a direita
+                        gerar_bipe_func(950, 80, 0.15, 1.0).play() 
+                    elif dx < -30: # Destino está para a esquerda
+                        gerar_bipe_func(950, 80, 1.0, 0.15).play() 
+                    else:
+                        gerar_bipe_func(600, 40, 0.4, 0.4).play() 
+
+                if carro.cortando_giro and tempo_atual % 4000 < 20:
+                    self.audio.falar("O cliente reclama do barulho do motor!")
+
+                if tempo_atual % 7000 < 20 and distancia_restante > 30:
+                    self.audio.falar(f"GPS: Siga em direção a {self.nome_destino_rua}. Faltam {int(distancia_restante)} metros.")
+
+                # Chegada no Destino
+                if distancia_restante <= 30.0:
+                    self.estado_app = "CHEGOU"
+                    carro.velocidade = 0.0
+                    
+                    creditos_ganhos = int(self.ganho_corrida)
+                    self.menu.creditos += creditos_ganhos
+                    self.menu.salvar_progresso()
+                    
+                    self.audio.falar(f"Viagem concluída! Você chegou certinho na {self.nome_destino_rua}. Você recebeu {self.ganho_corrida} reais. Seu saldo agora é de {self.menu.creditos} créditos. Abra o celular com P para buscar a próxima.")
+                    self.tempo_chamada = tempo_atual

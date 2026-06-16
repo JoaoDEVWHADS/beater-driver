@@ -151,10 +151,24 @@ while rodando_geral:
             # SE ESTIVER EDITANDO O NOME NO CADASTRO, ENCAMINHA PARA A DIGITAÇÃO DE TEXTO LIVRE
             if uber.estado_app == "CELULAR_CADASTRO" and uber.etapa_cadastro == 1:
                 uber.tratar_entrada_texto(evento)
+            elif uber.estado_app == "CELULAR_BUSCA_CEP":
+                uber.tratar_entrada_cep(evento, carro)
             else:
                 # Trata as etapas numéricas do cadastro (Etapa 2 e 3)
                 if uber.estado_app == "CELULAR_CADASTRO":
                     uber.tratar_teclado_cadastro(evento.key)
+
+                # Tecla para abrir o menu do CEP dentro do menu do celular
+                if uber.estado_app == "CELULAR_MENU" and evento.key in [pygame.K_1, pygame.K_KP1]:
+                    uber.estado_app = "CELULAR_BUSCA_CEP"
+                    uber.cep_input = ""
+                    uber.numero_input = ""
+                    uber.campo_atual = "CEP"
+                    uber.audio.falar("Digite o CEP do destino e pressione TAB para o número, ou ENTER para buscar.")
+
+                # Tecla de limpar destino e iniciar passeio livre por SP (Tecla -)
+                if evento.key in [pygame.K_MINUS, pygame.K_KP_MINUS]:
+                    uber.gps.limpar_destino()
 
                 # Ignição (Tecla L)
                 if evento.key == pygame.K_l:
@@ -257,6 +271,18 @@ while rodando_geral:
         txt_digitado = fonte_input.render(uber.cadastro_nome + "|", True, (0, 255, 0))
         tela.blit(txt_label, (20, 150))
         tela.blit(txt_digitado, (20, 190))
+    elif uber.estado_app == "CELULAR_BUSCA_CEP":
+        fonte_input = pygame.font.SysFont("Arial", 20)
+        cor_cep = (0, 255, 0) if uber.campo_atual == "CEP" else (255, 255, 255)
+        cor_num = (0, 255, 0) if uber.campo_atual == "NUMERO" else (255, 255, 255)
+        
+        lbl_cep = fonte_input.render(f"CEP: {uber.cep_input}" + ("|" if uber.campo_atual == "CEP" else ""), True, cor_cep)
+        lbl_num = fonte_input.render(f"Numero: {uber.numero_input}" + ("|" if uber.campo_atual == "NUMERO" else ""), True, cor_num)
+        lbl_help = fonte_input.render("TAB: Muda campo | ENTER: Buscar Rota", True, (150, 150, 150))
+        
+        tela.blit(lbl_cep, (20, 130))
+        tela.blit(lbl_num, (20, 170))
+        tela.blit(lbl_help, (20, 220))
 
     pygame.display.flip()
     relogio.tick(60)
